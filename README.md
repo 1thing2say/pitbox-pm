@@ -99,7 +99,7 @@ dashed pills with a jump-to-source button.
 
 **There is no login yet.** Anyone who can reach the port can edit or delete
 anything. On a shop PC or behind the campus VPN that is fine. Public hosting needs
-authentication first — see the options in [docs/HOSTING.md](docs/HOSTING.md).
+authentication first — see the options in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 **Back up with the script, not with copy-paste:**
 
@@ -115,4 +115,4 @@ If you deploy to a container host, mount a **persistent volume** for both the
 database and `storage/` — a redeploy wipes a container filesystem, and that is
 the most common way teams lose a season of work.
 
-See [docs/HOSTING.md](docs/HOSTING.md) for how to share it with the team.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for deployment and hosting options.

@@ -73,7 +73,7 @@ static/           The original no-build UI. Edit and refresh; no toolchain.
 tests/            26 tests over the parts that are easy to break
 scripts/          backup.py (WAL-safe), gc_blobs.py (reclaim orphan files)
 deploy/           serve.py + Task Scheduler XML for unattended hosting
-docs/             SCHEMA, FRONTEND, HOSTING
+docs/             SCHEMA, FRONTEND
 ```
 
 **The one rule:** nothing outside `app/tree.py` may write `Node.path`, `Node.depth`
@@ -148,8 +148,6 @@ else.
 wins. Add an `updated_at` check on PATCH if that bites.
 
 ## Deploying
-
-See **[HOSTING.md](HOSTING.md)** for the full walkthrough. The summary:
 
 Backups first, because this is the part teams skip. **Do not just copy
 `pitbox.db`** — the database runs in WAL mode, so recent writes sit in

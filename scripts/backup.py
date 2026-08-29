@@ -57,7 +57,7 @@ def main() -> int:
     source = db_path_from_url(settings.database_url)
     if source is None:
         print(f"Database is not SQLite ({settings.database_url}).")
-        print("Use pg_dump instead -- see docs/HOSTING.md.")
+        print("Use pg_dump instead for a Postgres database.")
         return 2
     if not source.exists():
         print(f"No database at {source}. Nothing to back up.")
