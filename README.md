@@ -95,24 +95,3 @@ dashed pills with a jump-to-source button.
 - **Colors** — the CSS variables at the top of `static/app.css` and
   `frontend/src/styles.css`
 
-## Before you put it on the internet
-
-**There is no login yet.** Anyone who can reach the port can edit or delete
-anything. On a shop PC or behind the campus VPN that is fine. Public hosting needs
-authentication first — see the options in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-
-**Back up with the script, not with copy-paste:**
-
-```bash
-python scripts/backup.py --keep 20
-```
-
-The database runs in WAL mode, so copying `pitbox.db` on its own can capture a
-file that opens perfectly and is missing almost all your parts. `backup.py` uses
-SQLite's online backup API, grabs `storage/` too, and verifies the result.
-
-If you deploy to a container host, mount a **persistent volume** for both the
-database and `storage/` — a redeploy wipes a container filesystem, and that is
-the most common way teams lose a season of work.
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for deployment and hosting options.
