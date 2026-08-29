@@ -1,0 +1,118 @@
+# Pit Box
+
+Part tracking and project management for the MESA ARC Racing Baja SAE team.
+
+Break the car down into a tree — **Vehicle → Subsystem → Assembly → Part** — as
+deep as you need. Attach datasheets, CAD, PCB files and firmware to the exact part
+they belong to. Tag anything, including whole branches. Then filter the tree down
+to just what you care about.
+
+## Run it
+
+**React + Vite UI, with hot reload** — starts the API and the frontend together:
+
+```powershell
+.\dev.ps1
+```
+
+Then open **http://localhost:5173**. (Use `localhost`, not `127.0.0.1` — Vite
+binds to the IPv6 loopback.)
+
+**Backend only**, serving the no-build UI (or the built React app if you have
+run `npm run build`):
+
+```powershell
+.\run.ps1
+```
+
+...and **http://127.0.0.1:8000**. On macOS / Linux use `./run.sh`.
+
+First run creates a virtual environment and installs dependencies (~30 seconds).
+There are two frontends and both work — see [docs/FRONTEND.md](docs/FRONTEND.md)
+for why, and for the note about how Node is installed here.
+
+Doing it by hand:
+```bash
+python -m venv .venv
+.venv/Scripts/python -m pip install -r requirements.txt   # .venv/bin/python on mac/linux
+.venv/Scripts/python -m uvicorn app.main:app --reload
+```
+
+The first launch seeds a demo car (the 2026 season, ~60 nodes) so there is
+something to click. Delete `pitbox.db` to start over.
+
+Interactive API docs: **http://127.0.0.1:8000/docs**
+
+## What it does
+
+**Trees.** Create a tree from scratch, from the standard Baja subsystem template,
+or by cloning a previous year's car — statuses reset, structure and tags intact.
+Add a child anywhere with `+`. Drag rows to re-parent. Right-click to duplicate a
+whole assembly (build one upright properly, then duplicate it for the other three
+corners).
+
+**Files.** Drag them onto a part. Uploading the same filename twice makes v2 and
+keeps v1. Identical files are stored once no matter how many parts reference them.
+
+**Tags.** Apply to one part, or tick **"apply to whole branch"** to tag a subsystem
+and everything under it — including parts added next month. Inherited tags show as
+dashed pills with a jump-to-source button.
+
+**Filters.** Click tag chips, search text, filter by status or assignee. Two views:
+- **Isolate** — prune the tree to matches plus the ancestors needed to reach them
+- **Highlight** — keep the whole tree, dim everything that does not match
+
+**Export.** `Export CSV` gives you a flat, indented BOM for the cost report.
+
+## Where things are
+
+| Path | What |
+|---|---|
+| `app/models.py` | The schema. Start here. |
+| `app/tree.py` | All hierarchy mechanics — paths, moves, cloning, tag resolution |
+| `app/routers/` | The API |
+| `frontend/src/lib/filter.ts` | The filtering algorithm (React app) |
+| `static/js/filter.js` | The same algorithm, no-build version |
+| `docs/SCHEMA.md` | Why the tree is stored the way it is |
+| `docs/ARCHITECTURE.md` | Stack rationale, deployment, what is missing |
+| `docs/FRONTEND.md` | The two frontends, and how to run the Vite one |
+| `tests/test_api.py` | 26 tests over the parts that are easy to break |
+
+## Tests
+
+```bash
+.venv/Scripts/python -m pip install -r requirements-dev.txt
+.venv/Scripts/python -m pytest tests -q
+```
+
+## Customizing it for your team
+
+- **Subsystem template** — `BAJA_TEMPLATE` in `app/seed.py`, a plain nested list
+- **Default tags** — `DEFAULT_TAGS` in the same file
+- **Statuses** — `STATUSES` in `app/models.py` and the matching `Status` literal in
+  `app/schemas.py`
+- **Extra part fields** — use the `extra` JSON column before adding a real column
+- **Colors** — the CSS variables at the top of `static/app.css` (shared with the
+  public team site)
+
+## Before you put it on the internet
+
+**There is no login yet.** Anyone who can reach the port can edit or delete
+anything. On a shop PC or behind the campus VPN that is fine. Public hosting needs
+authentication first — see the options in `docs/ARCHITECTURE.md`.
+
+**Back up with the script, not with copy-paste:**
+
+```bash
+python scripts/backup.py --keep 20
+```
+
+The database runs in WAL mode, so copying `pitbox.db` on its own can capture a
+file that opens perfectly and is missing almost all your parts. `backup.py` uses
+SQLite's online backup API, grabs `storage/` too, and verifies the result.
+
+If you deploy to a container host, mount a **persistent volume** for both the
+database and `storage/` — a redeploy wipes a container filesystem, and that is
+the most common way teams lose a season of work.
+
+See [docs/HOSTING.md](docs/HOSTING.md) for how to share it with the team.

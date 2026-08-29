@@ -1,0 +1,99 @@
+# Pit Box — Baja SAE part tracker
+# Python backend + Vite/React frontend on Windows.
+#
+# NOTE: git only treats # as a comment at the START of a line. Never put a
+# comment after a pattern on the same line — it becomes part of the pattern
+# and silently stops matching.
+
+# ─────────────────────────────────────────────────────────────
+# Runtime data — NEVER commit these
+# ─────────────────────────────────────────────────────────────
+# pitbox.db is the team's live BOM and storage/ holds every uploaded CAD file,
+# datasheet and firmware binary. They are data, not source: version them with
+# scripts/backup.py, not with git.
+pitbox.db
+
+# WAL sidecars. The database runs in WAL mode, so the most recent writes live
+# in -wal until SQLite checkpoints. Both are churny binaries full of live data.
+pitbox.db-wal
+pitbox.db-shm
+pitbox.db-journal
+
+# Any database placed elsewhere via PITBOX_DATABASE_URL.
+*.sqlite
+*.sqlite3
+
+# Content-addressed blobs (every uploaded file).
+storage/
+
+# Output of scripts/backup.py.
+backups/
+
+# Rotating server logs written by the scheduled task.
+deploy/logs/
+
+# ─────────────────────────────────────────────────────────────
+# Secrets and local config
+# ─────────────────────────────────────────────────────────────
+.env
+.env.*
+
+# .env.example IS committed — it documents every setting.
+!.env.example
+
+# Cloudflare Tunnel credentials, if anyone keeps them in-tree by mistake.
+*.pem
+
+# ─────────────────────────────────────────────────────────────
+# Python
+# ─────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+
+# ─────────────────────────────────────────────────────────────
+# Frontend (Vite / React)
+# ─────────────────────────────────────────────────────────────
+node_modules/
+
+# Built on the host by `npm run build` — see docs/FRONTEND.md.
+frontend/dist/
+frontend/.vite/
+
+*.local
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+.eslintcache
+
+# package-lock.json is deliberately NOT ignored — committing it is what makes
+# `npm ci` reproducible for whoever inherits this next year.
+
+# ─────────────────────────────────────────────────────────────
+# Editors and OS
+# ─────────────────────────────────────────────────────────────
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─────────────────────────────────────────────────────────────
+# Claude Code
+# ─────────────────────────────────────────────────────────────
+# Local, per-machine permission grants — not useful to teammates.
+.claude/settings.local.json

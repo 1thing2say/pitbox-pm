@@ -1,0 +1,58 @@
+<Task version="1.4" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+  <RegistrationInfo>
+    <Author>MESA ARC Racing</Author>
+    <Description>Weekly Pit Box backup: WAL-safe SQLite copy plus uploaded files, verified, keeping the newest 20.</Description>
+    <URI>\Pit Box Backup</URI>
+  </RegistrationInfo>
+
+  <Triggers>
+    <CalendarTrigger>
+      <!-- Sunday 18:00. Change the day/time here, or in Task Scheduler afterwards. -->
+      <StartBoundary>2026-01-04T18:00:00</StartBoundary>
+      <Enabled>true</Enabled>
+      <ScheduleByWeek>
+        <DaysOfWeek><Sunday /></DaysOfWeek>
+        <WeeksInterval>1</WeeksInterval>
+      </ScheduleByWeek>
+    </CalendarTrigger>
+  </Triggers>
+
+  <Principals>
+    <!-- Runs as the person who installed it, only while they are logged on.
+         That needs no stored password and no admin rights. -->
+    <Principal id="Author">
+      <UserId>{{USER}}</UserId>
+      <LogonType>InteractiveToken</LogonType>
+      <RunLevel>LeastPrivilege</RunLevel>
+    </Principal>
+  </Principals>
+
+  <Settings>
+    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+    <!-- A shop PC is off most of the week. Without this, a backup missed
+         because the machine was asleep is simply never taken. -->
+    <StartWhenAvailable>true</StartWhenAvailable>
+    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+    <RunOnlyIfNetworkAvailable>false</RunOnlyIfNetworkAvailable>
+    <AllowHardTerminate>true</AllowHardTerminate>
+    <AllowStartOnDemand>true</AllowStartOnDemand>
+    <Enabled>true</Enabled>
+    <Hidden>false</Hidden>
+    <WakeToRun>false</WakeToRun>
+    <ExecutionTimeLimit>PT1H</ExecutionTimeLimit>
+    <Priority>7</Priority>
+    <RestartOnFailure>
+      <Interval>PT10M</Interval>
+      <Count>2</Count>
+    </RestartOnFailure>
+  </Settings>
+
+  <Actions Context="Author">
+    <Exec>
+      <Command>{{PYTHON}}</Command>
+      <Arguments>"{{PROJECT_DIR}}\scripts\backup.py" --keep 20</Arguments>
+      <WorkingDirectory>{{PROJECT_DIR}}</WorkingDirectory>
+    </Exec>
+  </Actions>
+</Task>

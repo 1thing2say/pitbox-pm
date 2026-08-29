@@ -1,0 +1,36 @@
+# Line endings.
+#
+# This repo is developed on Windows but run.sh has to work on macOS and Linux.
+# Without the rule below git would store it with CRLF, and bash fails with
+# "bad interpreter: /bin/bash^M" — a genuinely confusing error for whoever
+# clones it on a Mac.
+
+# Normalize everything to LF inside the repository; check out native.
+* text=auto
+
+# Shell scripts must keep LF in the working tree too, on every platform.
+*.sh text eol=lf
+
+# PowerShell and batch stay CRLF, which is what Windows tooling expects.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Never touch binaries.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.db binary
+*.sqlite binary
+*.step binary
+*.stp binary
+*.stl binary
+
+# Generated — collapse it in diffs and don't count it in language stats.
+frontend/package-lock.json linguist-generated=true -diff

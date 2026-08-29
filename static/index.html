@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pit Box — Part Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/app.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔧</text></svg>" />
+</head>
+<body>
+  <!-- ===== Top bar: project picker + global actions ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 48 48" width="26" height="26" aria-hidden="true">
+        <path d="M6 34 L18 12 L26 24 L34 14 L42 34 Z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+        <circle cx="16" cy="38" r="4" fill="currentColor"/><circle cx="34" cy="38" r="4" fill="currentColor"/>
+      </svg>
+      <span>Pit <em>Box</em></span>
+    </div>
+
+    <select id="projectPicker" class="input" aria-label="Select project"></select>
+
+    <div class="topbar-actions">
+      <button class="btn" id="newProjectBtn" title="Create a new tree">+ New Tree</button>
+      <button class="btn" id="cloneProjectBtn" title="Start next year from this car">Clone</button>
+      <a class="btn" id="exportBtn" href="#" title="Download the BOM as CSV">Export CSV</a>
+      <a class="btn btn-ghost" href="/docs" target="_blank" rel="noopener">API</a>
+    </div>
+  </header>
+
+  <!-- ===== Filter bar ===== -->
+  <section class="filterbar" aria-label="Filters">
+    <input id="searchInput" class="input search" type="search"
+           placeholder="Search name, part number, vendor, description…" />
+
+    <div class="filter-group">
+      <span class="filter-label">Tags</span>
+      <div id="tagFilters" class="chips" role="group" aria-label="Filter by tag"></div>
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-label">Match</span>
+      <div class="segmented" role="radiogroup" aria-label="Tag match mode">
+        <button data-tagmode="any" class="active" role="radio" aria-checked="true">Any</button>
+        <button data-tagmode="all" role="radio" aria-checked="false">All</button>
+      </div>
+    </div>
+
+    <div class="filter-group">
+      <span class="filter-label">View</span>
+      <!-- The two ways to look at a filtered tree. Isolate hides everything that
+           is not on the path to a match; Highlight keeps the whole tree but dims
+           the misses, which is better when you want to see WHERE matches sit. -->
+      <div class="segmented" role="radiogroup" aria-label="Filter display mode">
+        <button data-mode="isolate" class="active" role="radio" aria-checked="true">Isolate</button>
+        <button data-mode="highlight" role="radio" aria-checked="false">Highlight</button>
+      </div>
+    </div>
+
+    <select id="statusFilter" class="input compact" aria-label="Filter by status">
+      <option value="">Any status</option>
+    </select>
+
+    <select id="assigneeFilter" class="input compact" aria-label="Filter by assignee">
+      <option value="">Anyone</option>
+    </select>
+
+    <label class="check" title="Also show everything beneath a matching node">
+      <input type="checkbox" id="includeDescendants" /> <span>+ subtree</span>
+    </label>
+
+    <button class="btn btn-ghost" id="clearFilters">Clear</button>
+    <span id="filterCount" class="filter-count" aria-live="polite"></span>
+  </section>
+
+  <!-- ===== Main split: tree | detail ===== -->
+  <main class="layout">
+    <section class="pane tree-pane" aria-label="Vehicle breakdown">
+      <div class="pane-head">
+        <h2>Breakdown</h2>
+        <div class="pane-head-actions">
+          <button class="btn btn-sm" id="expandAll">Expand</button>
+          <button class="btn btn-sm" id="collapseAll">Collapse</button>
+        </div>
+      </div>
+      <div id="treeRoot" class="tree" role="tree" aria-label="Part hierarchy"></div>
+      <p class="hint">Drag a row onto another to re-parent it. Right-click for actions.</p>
+    </section>
+
+    <section class="pane detail-pane" aria-label="Node details">
+      <div id="detailRoot" class="detail-empty">
+        <p>Select a part to see its details, tags and files.</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="contextMenu" class="context-menu" hidden></div>
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>
