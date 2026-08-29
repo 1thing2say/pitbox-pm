@@ -74,7 +74,7 @@ dashed pills with a jump-to-source button.
 | `frontend/src/lib/filter.ts` | The filtering algorithm (React app) |
 | `static/js/filter.js` | The same algorithm, no-build version |
 | `docs/SCHEMA.md` | Why the tree is stored the way it is |
-| `docs/ARCHITECTURE.md` | Stack rationale, deployment, what is missing |
+| `docs/ARCHITECTURE.md` | Stack rationale and the design decisions behind it |
 | `docs/FRONTEND.md` | The two frontends, and how to run the Vite one |
 | `tests/test_api.py` | 26 tests over the parts that are easy to break |
 

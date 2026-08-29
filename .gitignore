@@ -97,3 +97,11 @@ desktop.ini
 # ─────────────────────────────────────────────────────────────
 # Local, per-machine permission grants — not useful to teammates.
 .claude/settings.local.json
+
+# ─────────────────────────────────────────────────────────────
+# Local operations notes
+# ─────────────────────────────────────────────────────────────
+# Running and deployment notes. Kept out of the repo on purpose — this is a
+# public repository and an ops runbook does not belong in one.
+OPERATIONS.md
+OPERATIONS-hosting.md
