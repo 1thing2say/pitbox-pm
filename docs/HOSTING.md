@@ -34,7 +34,7 @@ IT to approve or firewall.
 ### What you need
 
 - A domain on Cloudflare (~$10/yr at cost from Cloudflare Registrar). If the
-  team site already has one, use a subdomain: `pitbox.yourteam.org`.
+  team already owns one, use a subdomain: `pitbox.yourteam.org`.
 - A machine that stays on.
 
 ### Steps

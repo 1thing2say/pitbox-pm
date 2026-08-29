@@ -1,6 +1,6 @@
-/* Pit Box — shares the design tokens of the public team site so the two feel
-   like one product. Dark-only by design: this is a shop tool that lives on a
-   screen next to the car, and the team identity is dark. */
+/* Pit Box — MESA ARC Racing.
+   Dark-only by design: this is a shop tool that lives on a screen next to the
+   car, and the team identity is dark. Dirt-orange accent, Oswald + Inter. */
 
 :root {
   --bg: #0e0f12;

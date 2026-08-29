@@ -12,7 +12,7 @@ That pushes hard toward:
 - one language, not two
 - one process, not a frontend server plus an API server
 - one file to back up
-- no build step that can rot
+- a fallback UI that needs no build at all, for the day the toolchain rots
 - a dependency list short enough to read
 
 ## The stack
@@ -24,35 +24,32 @@ That pushes hard toward:
 | Validation | **Pydantic v2** | Bad data is rejected at the boundary with a readable error, not 200 rows into a CSV export. |
 | Database | **SQLite** now, **Postgres** later | Zero install, zero admin. Backup is copying one file. Handles a team of 30 without noticing. |
 | Files | Local disk, content-addressed | No S3 account, no credentials to leak, no bill. Abstracted so R2/S3 is a 3-function swap. |
-| Frontend | **Vanilla ES modules**, no build | Covered below — this is the contrarian call. |
+| Frontend | **React + Vite**, with a no-build fallback | Covered below — there are two, on purpose. |
 | Hosting | One process on one box | `uvicorn app.main:app`. Serves the API *and* the UI on one port. |
 
-### Why no React, and when to change your mind
+### Two frontends, and why both are still here
 
-The reflexive answer here is Next.js + Prisma + Postgres. I checked this machine
-first: **there is no Node, no npm, and no Docker installed.** Python is. That is
-not a coincidence — it reflects who is on this team.
+The original build used **vanilla ES modules with no build step at all**, because
+this machine had no Node, no npm and no Docker — only Python. For a team that
+loses a third of its members a year, "clone it and hit refresh" is a real
+advantage over a toolchain that can rot.
 
-A no-build frontend means:
+React + Vite was added later, deliberately, and the old UI was kept rather than
+deleted:
 
-- No `node_modules` (300 MB, ~1,000 transitive packages, a supply-chain surface).
-- No lockfile drift, no "works on my machine," no build that breaks because a
-  transitive dependency published a bad minor version the week before competition.
-- A new member edits `static/js/treeview.js`, hits refresh, and sees the change.
-  That is a 30-second onboarding instead of a 30-minute one.
-- The existing team website is already built this way (its README literally
-  advertises "No build step, no dependencies"). Consistency is worth something.
+| | `frontend/` (React 19 + TS + Vite) | `static/` (no build) |
+|---|---|---|
+| Served at | `/` once built | `/static/` always |
+| Needs Node | yes | no |
+| Tree guide lines + connection gutter | yes | no |
 
-The cost is real and worth naming: no JSX, no component library, and you hand-roll
-state. That is a fine trade at this size and a bad one at ten times this size.
+They have genuinely diverged — the connection gutter exists only in the React
+app. `static/` is a fallback for a machine with no Node, not a maintained twin.
+If nobody is using it in a year, delete it; nothing in `app/` depends on either.
 
-**Switch to React + Vite when** any of these become true:
-- more than ~4 people are editing the frontend at once,
-- you want a mobile app or a second client sharing components,
-- the tree needs windowing/virtualization for 10,000+ nodes.
-
-The API is a clean JSON boundary, so that migration replaces `static/` and touches
-nothing in `app/`.
+The cost of the React side is worth naming: ~28 npm packages, a lockfile, and a
+build that must run before deploy. That is the trade for components and types.
+See [FRONTEND.md](FRONTEND.md).
 
 ## Layout
 
@@ -66,13 +63,17 @@ app/
   storage.py      Content-addressed blob store
   seed.py         Baja subsystem template + default tags + demo data
   routers/        projects, nodes, tags, attachments, members
-static/           The UI. No build step; edit and refresh.
-  js/state.js     In-memory tree + indexes
-  js/filter.js    The filtering algorithm — read this one
-  js/treeview.js  Rendering
-  js/detail.js    Metadata form, tags, files
+frontend/         React + TypeScript + Vite (the primary UI)
+  src/lib/filter.ts       The filtering algorithm — read this one
+  src/lib/connections.ts  Non-hierarchical links drawn in the right gutter
+  src/lib/tree.ts         Indexes + the DOS-style guide glyphs
+  src/components/         TreeView, DetailPanel, FilterBar, ConnectionPicker
+static/           The original no-build UI. Edit and refresh; no toolchain.
+  js/filter.js    The same filtering algorithm, vanilla
 tests/            26 tests over the parts that are easy to break
-scripts/          gc_blobs.py — reclaim unreferenced files
+scripts/          backup.py (WAL-safe), gc_blobs.py (reclaim orphan files)
+deploy/           serve.py + Task Scheduler XML for unattended hosting
+docs/             SCHEMA, FRONTEND, HOSTING
 ```
 
 **The one rule:** nothing outside `app/tree.py` may write `Node.path`, `Node.depth`

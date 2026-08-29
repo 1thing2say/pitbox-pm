@@ -92,14 +92,14 @@ dashed pills with a jump-to-source button.
 - **Statuses** — `STATUSES` in `app/models.py` and the matching `Status` literal in
   `app/schemas.py`
 - **Extra part fields** — use the `extra` JSON column before adding a real column
-- **Colors** — the CSS variables at the top of `static/app.css` (shared with the
-  public team site)
+- **Colors** — the CSS variables at the top of `static/app.css` and
+  `frontend/src/styles.css`
 
 ## Before you put it on the internet
 
 **There is no login yet.** Anyone who can reach the port can edit or delete
 anything. On a shop PC or behind the campus VPN that is fine. Public hosting needs
-authentication first — see the options in `docs/ARCHITECTURE.md`.
+authentication first — see the options in [docs/HOSTING.md](docs/HOSTING.md).
 
 **Back up with the script, not with copy-paste:**
 
