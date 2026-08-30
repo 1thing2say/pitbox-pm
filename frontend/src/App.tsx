@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { api } from './api/client'
+import { api, type AuthMode } from './api/client'
 import type { Member, NodeDetail, ProjectSummary, TreeNode, TreeResponse } from './api/types'
 import { ConnectionPicker } from './components/ConnectionPicker'
 import { ContextMenu, type MenuTarget } from './components/ContextMenu'
@@ -36,6 +36,7 @@ export default function App() {
   const [menu, setMenu] = useState<MenuTarget | null>(null)
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState<Member | null>(null)
+  const [authMode, setAuthMode] = useState<AuthMode>('cloudflare')
 
   // Non-hierarchical links drawn in the right gutter: which field, and which of
   // its values are currently being drawn.
@@ -90,6 +91,7 @@ export default function App() {
   useEffect(() => {
     let cancelled = false
     api.me().then((m) => { if (!cancelled) setCurrentUser(m) }).catch(() => {})
+    api.health().then((h) => { if (!cancelled) setAuthMode(h.auth_mode) }).catch(() => {})
     return () => { cancelled = true }
   }, [])
 
@@ -304,11 +306,17 @@ export default function App() {
         projects={projects}
         projectId={projectId}
         currentUser={currentUser}
+        authMode={authMode}
         onSwitch={switchProject}
         onNew={() => void newProject()}
         onClone={() => void cloneProject()}
         onSignOut={() => {
-          // Ends the session server-side, then the backend sends us to /login.
+          if (authMode === 'cloudflare') {
+            // Cloudflare owns the session; this clears their cookie and the
+            // next request re-runs the Access policy.
+            window.location.href = '/cdn-cgi/access/logout'
+            return
+          }
           void api.logout().then(() => { window.location.href = '/login' })
         }}
       />

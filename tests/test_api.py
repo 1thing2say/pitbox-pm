@@ -17,6 +17,9 @@ import pytest
 _TMP = Path(tempfile.mkdtemp(prefix="pitbox-test-"))
 os.environ["PITBOX_DATABASE_URL"] = f"sqlite:///{(_TMP / 'test.db').as_posix()}"
 os.environ["PITBOX_STORAGE_DIR"] = str(_TMP / "storage")
+# The bulk of the suite drives the built-in login, so pin that mode. The
+# Cloudflare and open modes get their own tests below, which flip it back.
+os.environ["PITBOX_AUTH_MODE"] = "password"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
@@ -623,3 +626,90 @@ def test_cannot_deactivate_the_last_admin(client):
     me = client.get("/api/auth/me").json()
     res = client.delete(f"/api/members/{me['id']}")
     assert res.status_code == 400
+
+
+# --- auth modes ---------------------------------------------------------------
+# The default deployment is Cloudflare Access: no accounts, no passwords, the
+# identity arrives in a header that only the tunnel can set.
+
+import contextlib  # noqa: E402
+
+from app.config import settings  # noqa: E402
+
+ACCESS_HEADER = "Cf-Access-Authenticated-User-Email"
+
+
+@contextlib.contextmanager
+def auth_mode(mode: str):
+    """Flip the mode for one test. settings is read live, so this is enough."""
+    previous = settings.auth_mode
+    settings.auth_mode = mode  # type: ignore[assignment]
+    try:
+        yield
+    finally:
+        settings.auth_mode = previous  # type: ignore[assignment]
+
+
+def test_cloudflare_mode_accepts_the_access_header(anon):
+    with auth_mode("cloudflare"):
+        res = anon.get("/api/auth/me", headers={ACCESS_HEADER: "Newbie@School.EDU"})
+        assert res.status_code == 200
+        body = res.json()
+        # Created on first sight — nobody had to make them an account.
+        assert body["email"] == "newbie@school.edu"
+        assert body["name"] == "Newbie"
+        assert anon.get("/api/projects", headers={ACCESS_HEADER: "newbie@school.edu"}).status_code == 200
+
+
+def test_cloudflare_mode_reuses_the_same_member_on_return_visits(anon):
+    with auth_mode("cloudflare"):
+        first = anon.get("/api/auth/me", headers={ACCESS_HEADER: "repeat@school.edu"}).json()
+        second = anon.get("/api/auth/me", headers={ACCESS_HEADER: "REPEAT@school.edu"}).json()
+        assert first["id"] == second["id"], "email match must be case-insensitive"
+
+
+def test_cloudflare_mode_links_to_an_existing_roster_member(client, anon):
+    """Someone already in the roster as an assignee keeps their record — they
+    do not get a duplicate the first time they sign in."""
+    existing = client.post("/api/members", json={
+        "name": "Already Here", "email": "already@school.edu", "subteam": "Brakes",
+    }).json()
+    with auth_mode("cloudflare"):
+        seen = anon.get("/api/auth/me", headers={ACCESS_HEADER: "already@school.edu"}).json()
+    assert seen["id"] == existing["id"]
+    assert seen["name"] == "Already Here"     # not overwritten
+    assert seen["subteam"] == "Brakes"
+
+
+def test_cloudflare_mode_refuses_a_request_with_no_access_header(anon):
+    """No header means the tunnel was bypassed or no policy is attached.
+    Fail closed, and say which."""
+    with auth_mode("cloudflare"):
+        res = anon.get("/api/projects")
+        assert res.status_code == 403
+        assert "Cloudflare Access" in res.json()["detail"]
+
+
+def test_built_in_login_is_disabled_outside_password_mode(anon):
+    with auth_mode("cloudflare"):
+        assert anon.get("/login").status_code == 404
+        assert anon.post("/api/auth/login",
+                         json={"email": "a@b.c", "password": "x"}).status_code == 404
+
+
+def test_health_reports_the_mode(anon):
+    with auth_mode("cloudflare"):
+        assert anon.get("/api/health").json()["auth_mode"] == "cloudflare"
+
+
+def test_none_mode_is_open_and_needs_no_header(anon):
+    with auth_mode("none"):
+        assert anon.get("/api/projects").status_code == 200
+        assert anon.get("/api/auth/me").json()["email"] == "local@localhost"
+
+
+def test_password_mode_ignores_the_access_header(anon):
+    """A forged header must not grant anything when the app is not behind
+    Cloudflare — otherwise switching modes would open a hole."""
+    res = anon.get("/api/projects", headers={ACCESS_HEADER: "attacker@evil.com"})
+    assert res.status_code == 401

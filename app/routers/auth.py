@@ -16,6 +16,16 @@ from ..config import settings
 from ..database import get_db
 from ..models import Member
 
+
+def _require_password_mode() -> None:
+    """The built-in login is off unless PITBOX_AUTH_MODE=password."""
+    if settings.auth_mode != "password":
+        raise HTTPException(
+            404,
+            f"The built-in login is disabled (auth_mode={settings.auth_mode}). "
+            "Access is handled by Cloudflare Access.",
+        )
+
 router = APIRouter(tags=["auth"])
 
 
@@ -26,6 +36,7 @@ def login(
     response: Response,
     db: DbSession = Depends(get_db),
 ):
+    _require_password_mode()
     email = payload.email.strip().lower()
 
     wait = security.throttle_check(email)
@@ -50,6 +61,7 @@ def login(
 
 @router.post("/api/auth/logout", status_code=204)
 def logout(request: Request, response: Response, db: DbSession = Depends(get_db)):
+    _require_password_mode()
     token = request.cookies.get(security.COOKIE_NAME)
     if token:
         security.destroy_session(db, token)
@@ -75,6 +87,7 @@ def change_own_password(
     assumption that a password change may be a response to one being stolen —
     the browser doing the changing stays signed in.
     """
+    _require_password_mode()
     if not security.verify_password(payload.current_password, member.password_hash):
         raise HTTPException(401, "Current password is wrong.")
 
@@ -91,6 +104,7 @@ def change_own_password(
 
 @router.get("/login", include_in_schema=False, response_class=HTMLResponse)
 def login_page(member: Member | None = Depends(security.current_member_optional)):
+    _require_password_mode()
     if member is not None:
         # Already signed in — don't make them look at a login form.
         return HTMLResponse('<meta http-equiv="refresh" content="0; url=/">', status_code=200)

@@ -1,5 +1,10 @@
 """Create a login account, or reset someone's password.
 
+ONLY APPLIES WHEN PITBOX_AUTH_MODE=password. The default deployment uses
+Cloudflare Access, where accounts are created automatically the first time
+someone signs in and this script is not needed at all -- see
+docs/CLOUDFLARE.md.
+
 This is how the FIRST admin gets made — there is no sign-up page, on purpose:
 a public tracker with open registration is barely better than no login at all.
 

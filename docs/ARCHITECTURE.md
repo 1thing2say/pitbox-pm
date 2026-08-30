@@ -21,7 +21,7 @@ That pushes hard toward:
 |---|---|---|
 | API | **FastAPI** (Python) | Auto-generates interactive docs at `/docs`, so the API explains itself to the next maintainer. Type hints double as validation. |
 | ORM | **SQLAlchemy 2.0** | The declarative models *are* the schema documentation. Swapping SQLite for Postgres is a connection-string change. |
-| Auth | **Sessions + scrypt**, stdlib only | No new dependency. Sessions live in the database so they can actually be revoked. |
+| Auth | **Cloudflare Access**, with a built-in login as fallback | No passwords to manage and no accounts to create, so nothing to hand over at the end of the year. |
 | Validation | **Pydantic v2** | Bad data is rejected at the boundary with a readable error, not 200 rows into a CSV export. |
 | Database | **SQLite** now, **Postgres** later | Zero install, zero admin. Backup is copying one file. Handles a team of 30 without noticing. |
 | Files | Local disk, content-addressed | No S3 account, no credentials to leak, no bill. Abstracted so R2/S3 is a 3-function swap. |
@@ -105,7 +105,23 @@ Two modes, because they answer different questions:
 - **Highlight** — keep the whole tree, dim the misses. "Where does the electrical
   work actually live in this car?"
 
-### Login is deliberately boring
+### Access is somebody else's problem, deliberately
+
+The deployed configuration has **no login code in the request path at all**.
+Cloudflare Access gates the hostname by email domain and passes the verified
+address in a header; the app creates a member record the first time it sees
+someone. That was chosen over building auth for one reason: whoever inherits
+this should not have to run scripts, reset passwords, or remember to remove
+graduating seniors. The only thing handed over is a dashboard login.
+
+It is safe only because the app binds 127.0.0.1 and a tunnel is the sole route
+in — nothing else can reach it to forge that header. `docs/CLOUDFLARE.md` says
+so loudly, because it is the one assumption that would quietly become false if
+someone "helpfully" bound it to 0.0.0.0.
+
+A full built-in login still ships, switched off behind `PITBOX_AUTH_MODE=password`,
+for running without Cloudflare. It is worth knowing how it works even if you
+never turn it on.
 
 Passwords are hashed with `hashlib.scrypt` — a memory-hard KDF that ships with
 Python. No bcrypt, no passlib, no argon2 package: that is three more things to

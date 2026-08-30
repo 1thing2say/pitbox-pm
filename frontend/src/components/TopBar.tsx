@@ -1,9 +1,11 @@
+import type { AuthMode } from '../api/client'
 import type { Member, ProjectSummary } from '../api/types'
 
 interface Props {
   projects: ProjectSummary[]
   projectId: number | null
   currentUser: Member | null
+  authMode: AuthMode
   onSwitch: (id: number) => void
   onNew: () => void
   onClone: () => void
@@ -11,7 +13,7 @@ interface Props {
 }
 
 export function TopBar({
-  projects, projectId, currentUser, onSwitch, onNew, onClone, onSignOut,
+  projects, projectId, currentUser, authMode, onSwitch, onNew, onClone, onSignOut,
 }: Props) {
   return (
     <header className="topbar">
@@ -75,9 +77,19 @@ export function TopBar({
             {currentUser.is_admin && <span className="admin-pip">admin</span>}
           </span>
         )}
-        <button type="button" className="btn btn-ghost" onClick={onSignOut}>
-          Sign out
-        </button>
+        {/* auth_mode=none has nothing to sign out of. Under Cloudflare Access
+            the session belongs to Cloudflare, so the button hands off to their
+            logout endpoint rather than pretending the app owns it. */}
+        {authMode !== 'none' && (
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onSignOut}
+            title={authMode === 'cloudflare' ? 'Signs you out of Cloudflare Access' : undefined}
+          >
+            Sign out
+          </button>
+        )}
       </div>
     </header>
   )

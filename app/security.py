@@ -27,7 +27,7 @@ import time
 from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, Request, Response
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session as DbSession
 
 from .config import settings
@@ -158,7 +158,54 @@ def clear_session_cookie(response: Response) -> None:
 
 # --- request dependencies ----------------------------------------------------
 
+def member_from_access_header(request: Request, db: DbSession) -> Member | None:
+    """Identity supplied by Cloudflare Access.
+
+    Cloudflare terminates the request, checks it against your Access policy, and
+    injects the verified email. The app trusts that header -- which is safe for
+    exactly one reason: cloudflared is the ONLY route to this process. The app
+    binds 127.0.0.1, so nothing can reach it without going through the tunnel,
+    and nothing else can set that header.
+
+    If you ever bind this to 0.0.0.0, or publish the port, that assumption dies
+    and anyone can forge the header. See docs/CLOUDFLARE.md.
+
+    Members are created on first sight, which is the point of this mode: a new
+    teammate with a school email signs in and is simply there, in the assignee
+    list too, with nobody creating an account for them.
+    """
+    email = request.headers.get(settings.access_email_header, "").strip().lower()
+    if not email:
+        return None
+
+    member = db.scalar(select(Member).where(func.lower(Member.email) == email))
+    if member is None:
+        # Name it after the local part until they edit it -- "e.carter" beats
+        # a blank row, and they can fix it in the app.
+        member = Member(name=email.split("@")[0].replace(".", " ").title(), email=email)
+        db.add(member)
+        db.commit()
+        db.refresh(member)
+    elif not member.is_active:
+        # Deactivated locally but still allowed by the Access policy. Access is
+        # the authority in this mode, so let them back in.
+        member.is_active = True
+        db.commit()
+
+    member.last_login_at = utcnow()
+    db.commit()
+    return member
+
+
 def current_member_optional(request: Request, db: DbSession = Depends(get_db)) -> Member | None:
+    """Resolve who is making this request, according to the configured mode."""
+    if settings.auth_mode == "none":
+        return _local_dev_member(db)
+
+    if settings.auth_mode == "cloudflare":
+        return member_from_access_header(request, db)
+
+    # password mode: the built-in session cookie
     token = request.cookies.get(COOKIE_NAME)
     if not token:
         return None
@@ -184,13 +231,49 @@ def current_member_optional(request: Request, db: DbSession = Depends(get_db)) -
     return member
 
 
-def require_member(member: Member | None = Depends(current_member_optional)) -> Member:
+_DEV_EMAIL = "local@localhost"
+
+
+def _local_dev_member(db: DbSession) -> Member:
+    """auth_mode=none: everyone is the same local user.
+
+    Exists so the app is usable offline with no login at all. Never reachable in
+    the other modes, and main.py logs a warning at startup when this is on.
+    """
+    member = db.scalar(select(Member).where(Member.email == _DEV_EMAIL))
     if member is None:
-        raise HTTPException(401, "Not signed in.")
+        member = Member(name="Local User", email=_DEV_EMAIL, is_admin=True)
+        db.add(member)
+        db.commit()
+        db.refresh(member)
     return member
 
 
+def require_member(member: Member | None = Depends(current_member_optional)) -> Member:
+    if member is not None:
+        return member
+    if settings.auth_mode == "cloudflare":
+        # Almost always a misconfiguration rather than a signed-out user: either
+        # the tunnel is bypassed, or no Access policy is attached to the hostname.
+        raise HTTPException(
+            403,
+            "No Cloudflare Access identity on this request. This app must be "
+            "reached through its Cloudflare Tunnel with an Access policy "
+            "attached. For local use, set PITBOX_AUTH_MODE=none.",
+        )
+    raise HTTPException(401, "Not signed in.")
+
+
 def require_admin(member: Member = Depends(require_member)) -> Member:
+    """Roster management.
+
+    Only meaningful in password mode. Under Cloudflare Access the gate is the
+    Access policy itself -- everyone who got this far was allowed in by it, and
+    there is no admin flag to grant because there are no accounts to manage.
+    Enforcing it here would just lock everyone out of the roster screen.
+    """
+    if settings.auth_mode != "password":
+        return member
     if not member.is_admin:
         raise HTTPException(403, "That action needs an admin account.")
     return member

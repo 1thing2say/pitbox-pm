@@ -8,6 +8,7 @@ Then open http://127.0.0.1:8000 . Interactive API docs are at /docs.
 """
 from __future__ import annotations
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -38,6 +39,11 @@ async def lifespan(_app: FastAPI):
     # create_all builds missing tables but never alters existing ones, so adding
     # the login columns needs this for anyone with a database already.
     run_migrations(engine)
+    if settings.auth_mode == "none":
+        logging.getLogger("pitbox").warning(
+            "PITBOX_AUTH_MODE=none -- there is NO authentication. Fine on a "
+            "laptop, never on anything reachable from outside this machine."
+        )
     with SessionLocal() as db:
         ensure_default_tags(db)
         seed_demo(db)  # no-op once any project exists
@@ -67,7 +73,10 @@ for _router in PROTECTED:
 def health():
     """Deliberately public, so uptime checks and `fly status` work without a login.
     It reveals only that the service is up and the team name."""
-    return {"status": "ok", "team": settings.team_name}
+    # auth_mode is here so the UI knows whether to offer a sign-out button and
+    # where to point it, and so you can confirm at a glance which mode a running
+    # instance is in.
+    return {"status": "ok", "team": settings.team_name, "auth_mode": settings.auth_mode}
 
 
 # The API routes are declared before any static mount so /api/* always wins.
@@ -85,10 +94,11 @@ if STATIC_DIR.exists():
 
 
 @app.get("/", include_in_schema=False)
-def index(member: Member | None = Depends(current_member_optional)):
-    # Signed out, send them to the login page rather than an app shell that will
-    # immediately 401 on every request it makes.
-    if member is None:
+def index(member: Member | None = Depends(current_member_optional)):  # noqa: ARG001
+    # Only password mode has a login page to send people to. Under Cloudflare
+    # Access an unidentified request means the tunnel was bypassed, and
+    # require_member raises a 403 that explains that.
+    if member is None and settings.auth_mode == "password":
         return RedirectResponse("/login", status_code=302)
     if VITE_DIST.exists():
         return FileResponse(VITE_DIST / "index.html")

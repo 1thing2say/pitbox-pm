@@ -46,6 +46,11 @@ if (-not (Test-Path "frontend\node_modules")) {
     Pop-Location
 }
 
+# --- auth ---------------------------------------------------------------------
+# No Cloudflare Tunnel in front of a dev machine, so run wide open. Production
+# leaves PITBOX_AUTH_MODE unset, which defaults to cloudflare.
+$env:PITBOX_AUTH_MODE = "none"
+
 # --- run both -----------------------------------------------------------------
 Write-Host ""
 Write-Host "  API  http://127.0.0.1:8000/docs" -ForegroundColor DarkGray

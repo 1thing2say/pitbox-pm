@@ -81,7 +81,10 @@ export interface NodeCreatePayload {
   status?: Status
 }
 
+export type AuthMode = 'cloudflare' | 'password' | 'none'
+
 export const api = {
+  health: () => request<{ status: string; team: string; auth_mode: AuthMode }>('/api/health'),
   me: () => request<Member>('/api/auth/me'),
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
 
