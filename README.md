@@ -43,6 +43,27 @@ something to click. Delete `pitbox.db` to start over.
 
 Interactive API docs: **http://127.0.0.1:8000/docs**
 
+## First run: make yourself an account
+
+Pit Box requires a login, and there is no sign-up page — a tracker anyone can
+register for is barely better than no login at all. Create the first admin from
+the command line:
+
+```bash
+python scripts/create_user.py --email you@school.edu --name "Your Name" --admin
+```
+
+It asks for the password interactively, so it never lands in your shell history.
+After that you can add teammates the same way, or from the app once signed in.
+
+```bash
+python scripts/create_user.py --list      # who has an account
+python scripts/create_user.py --email someone@school.edu --reset
+```
+
+People already on the roster (assignees) become login accounts the moment you
+give them a password — the same record, so nobody has to be added twice.
+
 ## What it does
 
 **Trees.** Create a tree from scratch, from the standard Baja subsystem template,
@@ -71,6 +92,7 @@ dashed pills with a jump-to-source button.
 | `app/models.py` | The schema. Start here. |
 | `app/tree.py` | All hierarchy mechanics — paths, moves, cloning, tag resolution |
 | `app/routers/` | The API |
+| `app/security.py` | Password hashing, sessions, the guard on every route |
 | `frontend/src/lib/filter.ts` | The filtering algorithm (React app) |
 | `static/js/filter.js` | The same algorithm, no-build version |
 | `docs/SCHEMA.md` | Why the tree is stored the way it is |

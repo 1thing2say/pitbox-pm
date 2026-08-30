@@ -14,10 +14,15 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from fastapi import Depends
+from fastapi.responses import RedirectResponse
+
 from .config import BASE_DIR, settings
 from .database import SessionLocal, engine
-from .models import Base
-from .routers import attachments, members, nodes, projects, tags
+from .migrate import run_migrations
+from .models import Base, Member
+from .routers import attachments, auth, members, nodes, projects, tags
+from .security import current_member_optional, purge_expired_sessions, require_member
 from .seed import ensure_default_tags, seed_demo
 
 STATIC_DIR = BASE_DIR / "static"        # the original zero-build UI
@@ -30,9 +35,13 @@ async def lifespan(_app: FastAPI):
     # disposable. Once you have a season's worth of real parts in here, switch to
     # Alembic (pip install alembic; alembic init migrations) -- see docs/ARCHITECTURE.md.
     Base.metadata.create_all(bind=engine)
+    # create_all builds missing tables but never alters existing ones, so adding
+    # the login columns needs this for anyone with a database already.
+    run_migrations(engine)
     with SessionLocal() as db:
         ensure_default_tags(db)
         seed_demo(db)  # no-op once any project exists
+        purge_expired_sessions(db)
     yield
 
 
@@ -43,15 +52,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.include_router(projects.router)
-app.include_router(nodes.router)
-app.include_router(tags.router)
-app.include_router(attachments.router)
-app.include_router(members.router)
+# Auth first, and unguarded — you cannot require a session to sign in.
+app.include_router(auth.router)
+
+# Everything else requires one. Declaring it here rather than on each endpoint
+# means a new route is protected by default: you have to go out of your way to
+# expose something, instead of remembering to lock it down.
+PROTECTED = [projects.router, nodes.router, tags.router, attachments.router, members.router]
+for _router in PROTECTED:
+    app.include_router(_router, dependencies=[Depends(require_member)])
 
 
 @app.get("/api/health")
 def health():
+    """Deliberately public, so uptime checks and `fly status` work without a login.
+    It reveals only that the service is up and the team name."""
     return {"status": "ok", "team": settings.team_name}
 
 
@@ -70,7 +85,11 @@ if STATIC_DIR.exists():
 
 
 @app.get("/", include_in_schema=False)
-def index():
+def index(member: Member | None = Depends(current_member_optional)):
+    # Signed out, send them to the login page rather than an app shell that will
+    # immediately 401 on every request it makes.
+    if member is None:
+        return RedirectResponse("/login", status_code=302)
     if VITE_DIST.exists():
         return FileResponse(VITE_DIST / "index.html")
     if STATIC_DIR.exists():

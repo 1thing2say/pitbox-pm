@@ -112,6 +112,10 @@ export interface Member {
   subteam: string | null
   role: string | null
   is_active: boolean
+  /** Admins manage the roster. Absent on older payloads, so default false. */
+  is_admin?: boolean
+  /** Whether this member can sign in at all. The hash never leaves the server. */
+  has_password?: boolean
 }
 
 export interface TreeResponse {

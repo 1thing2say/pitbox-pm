@@ -1,5 +1,6 @@
 import type {
   Attachment,
+  Member,
   DeleteResult,
   NodeDetail,
   ProjectOut,
@@ -25,8 +26,22 @@ interface ValidationItem {
   msg?: string
 }
 
+/**
+ * A session that expired mid-use, or a signed-out visitor. Send them to the
+ * login page and come straight back to where they were.
+ *
+ * Returns a promise that never settles on purpose: the page is already
+ * navigating away, and resolving would flash an error toast on the way out.
+ */
+function toLogin(): Promise<never> {
+  const next = encodeURIComponent(window.location.pathname + window.location.search)
+  window.location.href = `/login?next=${next}`
+  return new Promise<never>(() => {})
+}
+
 async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(url, options)
+  if (res.status === 401) return toLogin()
   if (!res.ok) {
     let message = `${res.status} ${res.statusText}`
     try {
@@ -67,6 +82,9 @@ export interface NodeCreatePayload {
 }
 
 export const api = {
+  me: () => request<Member>('/api/auth/me'),
+  logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
+
   listProjects: () => request<ProjectSummary[]>('/api/projects'),
 
   createProject: (payload: {

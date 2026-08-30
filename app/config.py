@@ -21,6 +21,15 @@ class Settings(BaseSettings):
     storage_dir: Path = BASE_DIR / "storage"
     max_upload_mb: int = 100
 
+    # --- login ---------------------------------------------------------------
+    session_days: int = 30
+
+    # Set PITBOX_COOKIE_SECURE=true once you are behind HTTPS, so the session
+    # cookie is never sent over a plain connection. Left false by default
+    # because on http://localhost a secure cookie is simply dropped, and a login
+    # that silently fails to stick is a miserable thing to debug.
+    cookie_secure: bool = False
+
     # Extensions we refuse outright. Everything else is allowed but is always
     # served back as an attachment, never executed or inlined.
     blocked_extensions: tuple[str, ...] = (

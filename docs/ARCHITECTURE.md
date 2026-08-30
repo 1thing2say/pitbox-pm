@@ -21,6 +21,7 @@ That pushes hard toward:
 |---|---|---|
 | API | **FastAPI** (Python) | Auto-generates interactive docs at `/docs`, so the API explains itself to the next maintainer. Type hints double as validation. |
 | ORM | **SQLAlchemy 2.0** | The declarative models *are* the schema documentation. Swapping SQLite for Postgres is a connection-string change. |
+| Auth | **Sessions + scrypt**, stdlib only | No new dependency. Sessions live in the database so they can actually be revoked. |
 | Validation | **Pydantic v2** | Bad data is rejected at the boundary with a readable error, not 200 rows into a CSV export. |
 | Database | **SQLite** now, **Postgres** later | Zero install, zero admin. Backup is copying one file. Handles a team of 30 without noticing. |
 | Files | Local disk, content-addressed | No S3 account, no credentials to leak, no bill. Abstracted so R2/S3 is a 3-function swap. |
@@ -103,6 +104,31 @@ Two modes, because they answer different questions:
 - **Isolate** — prune to matches + scaffolding. "What do I still owe?"
 - **Highlight** — keep the whole tree, dim the misses. "Where does the electrical
   work actually live in this car?"
+
+### Login is deliberately boring
+
+Passwords are hashed with `hashlib.scrypt` — a memory-hard KDF that ships with
+Python. No bcrypt, no passlib, no argon2 package: that is three more things to
+keep alive for a team that hands this over every year, and passlib in particular
+has broken against new bcrypt releases before. The cost parameters are stored
+with each hash, so they can be raised later without invalidating anyone.
+
+Sessions are rows in the database, not signed stateless cookies. The lookup
+costs a query; what it buys is revocation — logging out, resetting a password,
+or deactivating a member ends access on the very next request rather than
+whenever a token happens to expire. For a team that graduates a third of its
+members every year, being able to cut access immediately is worth more than
+saving a query.
+
+Accounts live on the existing `members` table rather than a separate `users`
+table, so a graduating senior is deactivated in one place instead of two, and
+their name stays on the parts they designed. A member with no password simply
+cannot sign in, which is exactly right for people you assign work to but who
+never log in.
+
+The guard is applied where the routers are mounted, not endpoint by endpoint, so
+a new route is protected by default — you have to go out of your way to expose
+something rather than remembering to lock it down.
 
 ### Money is integers
 

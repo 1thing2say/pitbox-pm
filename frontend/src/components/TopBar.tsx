@@ -1,14 +1,18 @@
-import type { ProjectSummary } from '../api/types'
+import type { Member, ProjectSummary } from '../api/types'
 
 interface Props {
   projects: ProjectSummary[]
   projectId: number | null
+  currentUser: Member | null
   onSwitch: (id: number) => void
   onNew: () => void
   onClone: () => void
+  onSignOut: () => void
 }
 
-export function TopBar({ projects, projectId, onSwitch, onNew, onClone }: Props) {
+export function TopBar({
+  projects, projectId, currentUser, onSwitch, onNew, onClone, onSignOut,
+}: Props) {
   return (
     <header className="topbar">
       <div className="brand">
@@ -64,6 +68,16 @@ export function TopBar({ projects, projectId, onSwitch, onNew, onClone }: Props)
         <a className="btn btn-ghost" href="/docs" target="_blank" rel="noopener">
           API
         </a>
+
+        {currentUser && (
+          <span className="whoami" title={currentUser.email ?? undefined}>
+            {currentUser.name}
+            {currentUser.is_admin && <span className="admin-pip">admin</span>}
+          </span>
+        )}
+        <button type="button" className="btn btn-ghost" onClick={onSignOut}>
+          Sign out
+        </button>
       </div>
     </header>
   )

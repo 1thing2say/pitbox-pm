@@ -16,6 +16,13 @@ export default defineConfig({
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
+      // The login page is served by the backend so both frontends share one
+      // implementation. Without this it 404s on the dev server and a signed-out
+      // user in `npm run dev` can never get in.
+      '/login': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
     },
   },
   build: {
