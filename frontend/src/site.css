@@ -331,30 +331,35 @@
   z-index: 2;
   pointer-events: none;
 }
-/* The same field, sized and placed over the section glow further down the
-   page. It sits above the glow (z 0) and below the panel (z 1), and is masked
-   to the glow's own falloff so the points live in the orange rather than
-   floating out onto flat black. */
+/* The same field, over the section glow. Geometry matters here: the glow box
+   starts 150px above .gh-stage and runs 540px down, but the panel covers it
+   from 0, so the only part anyone SEES is the band above the panel edge — plus
+   the warm spill that reaches up behind the heading and the icon. So the field
+   is tall enough to reach the icon and masked strongest just above the panel,
+   where the bloom actually is, instead of centred on a box that is mostly
+   hidden. z-index 0 keeps it behind the panel (z 1) and the copy. */
 .glow-stars {
   position: absolute;
   left: 50%;
-  top: -150px;
-  width: min(1120px, 112%);
-  height: 540px;
+  top: -540px;
+  width: min(1180px, 118%);
+  height: 720px;
   transform: translateX(-50%);
-  z-index: 1;
+  z-index: 0;
   pointer-events: none;
   -webkit-mask-image: radial-gradient(
-    ellipse 46% 46% at 50% 52%,
+    ellipse 48% 46% at 50% 74%,
     #000 0%,
-    rgba(0, 0, 0, 0.55) 42%,
-    transparent 72%
+    rgba(0, 0, 0, 0.88) 40%,
+    rgba(0, 0, 0, 0.48) 64%,
+    transparent 84%
   );
   mask-image: radial-gradient(
-    ellipse 46% 46% at 50% 52%,
+    ellipse 48% 46% at 50% 74%,
     #000 0%,
-    rgba(0, 0, 0, 0.55) 42%,
-    transparent 72%
+    rgba(0, 0, 0, 0.88) 40%,
+    rgba(0, 0, 0, 0.48) 64%,
+    transparent 84%
   );
   -webkit-mask-repeat: no-repeat;
   mask-repeat: no-repeat;
@@ -390,7 +395,7 @@
   z-index: 3;
   /* Cancels the padding below, so the halo's breathing room costs no layout
      space and the letters land exactly where they did before it was added. */
-  margin: -0.4em 0;
+  margin: -0.62em 0;
   /* Font-size lives here rather than on the inner element for two reasons: the
      wipe below is expressed in em, so it tracks the letters at every viewport
      width instead of drifting as the clamp changes; and the vertical padding
@@ -398,13 +403,13 @@
      it does not cover, so without that room the halo is sliced off square and
      the text sits in a visible bright rectangle. */
   font-size: clamp(3.4rem, 19vw, 16rem);
-  padding: 0.4em 24px;
+  padding: 0.62em 24px;
   /* Wiped out from the bottom rather than blurred: a mask edge travels up
      through the glyphs, so the letters stay perfectly sharp and simply stop
      existing from the baseline up. The text spans 0.4em to 1.32em of the box,
-     so the edge starts just under it (0.05em, nothing hidden at rest) and ends
-     just over the cap height (1.35em). */
-  --wipe: calc((var(--cardp) - 0.62) / 0.38 * 1.3em + 0.05em);
+     so the edge starts just under it (0.26em, nothing hidden at rest) and ends
+     just over the cap height (1.58em). */
+  --wipe: calc((var(--cardp) - 0.62) / 0.38 * 1.32em + 0.26em);
   -webkit-mask-image: linear-gradient(
     to top,
     transparent var(--wipe),
@@ -450,10 +455,41 @@
   color: transparent;
   animation: mark-emerge 2.1s cubic-bezier(0.16, 0.84, 0.3, 1) both;
 }
-/* The nav shows PIT light / BOX bold. The hero is the same two weights at the
-   same ratio, so the big mark and the small one read as one identity. */
-.hm-thin { font-weight: 300; }
-.hm-bold { font-weight: 600; }
+/* The nav shows PIT light and white, BOX bold and orange. The hero is now the
+   same mark at size: same two weights, same two colours, each half carrying its
+   own gradient so both still fall away into the dark at the feet. Clipping on
+   the spans overrides the parent's, which keeps painting the space between. */
+.hm-thin,
+.hm-bold {
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hm-thin {
+  font-weight: 300;
+  background-image: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #ffffff 36%,
+    #eef0f3 52%,
+    #b9bfc9 68%,
+    #737a86 82%,
+    #3a3f48 92%,
+    #1b1e24 100%
+  );
+}
+.hm-bold {
+  font-weight: 600;
+  background-image: linear-gradient(
+    180deg,
+    #ffb163 0%,
+    #ff8c2e 34%,
+    #ff6a1a 54%,
+    #c9520d 74%,
+    #6d2f07 90%,
+    #2a1305 100%
+  );
+}
 /* The letters are never blurred — they are sharp from the first frame and the
    entrance is an ignition instead: the glyphs come up dim and desaturated, then
    brighten as the halo blooms out of nothing, the way a stick lights when it is
@@ -463,8 +499,7 @@
   0% {
     opacity: 0;
     letter-spacing: clamp(14px, 4.5vw, 64px);
-    filter: brightness(0.2) saturate(0.5) drop-shadow(0 0 0 rgba(255, 255, 255, 0))
-      drop-shadow(0 0 0 rgba(255, 198, 142, 0));
+    filter: brightness(0.2) saturate(0.5) drop-shadow(0 0 0 rgba(255, 138, 43, 0));
   }
   55% {
     opacity: 1;
@@ -472,8 +507,7 @@
   100% {
     opacity: 1;
     letter-spacing: clamp(2px, 1.2vw, 14px);
-    filter: brightness(1) saturate(1) drop-shadow(0 0 30px rgba(255, 255, 255, 0.45))
-      drop-shadow(0 0 78px rgba(255, 198, 142, 0.34));
+    filter: brightness(1) saturate(1) drop-shadow(0 0 34px rgba(255, 138, 43, 0.34));
   }
 }
 
@@ -1086,8 +1120,7 @@
   .hero-mark-in {
     animation: none;
     opacity: 1;
-    filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.45))
-      drop-shadow(0 0 78px rgba(255, 198, 142, 0.34));
+    filter: drop-shadow(0 0 34px rgba(255, 138, 43, 0.34));
   }
   .hero-grids .grid-b { animation: none; }
   /* useHeroScroll parks data-hero at 'passed' under reduced motion, so the
