@@ -1,6 +1,6 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { Box3, Group, PMREMGenerator, Vector3 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
@@ -8,11 +8,27 @@ const MODEL = '/models/helmet.glb'
 /** A slow turn — one revolution a minute. Fast enough to read as alive,
  *  slow enough not to pull the eye off the copy underneath it. */
 const TURN = (Math.PI * 2) / 60
-/** Fades and rises in when the model is ready, not when the canvas mounts. */
-const IN_MS = 900
+/** Pops in when the model is ready, not when the canvas mounts. */
+const IN_MS = 620
+/** How much of the frame it will cross to reach the pointer, as a fraction of
+ *  the space available after its own size is accounted for. Fractions rather
+ *  than world units: the canvas is very wide and very short, and its width in
+ *  world units changes with the viewport, so a fixed offset that reads well at
+ *  one size is invisible at another. */
+const FOLLOW_X = 0.92
+const FOLLOW_Y = 0.8
+/** Roughly the helmet's own half-size, kept clear of the frame edge. */
+const MARGIN = 0.85
+/** Per-frame approach rate. Damped rather than snapped, so a fast mouse does
+ *  not throw it around. */
+const EASE = 6
 
 const clamp01 = (n: number) => Math.min(Math.max(n, 0), 1)
-const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
+/** Back-out: overshoots past 1 and settles, which is what reads as a pop. */
+const popOut = (t: number) => {
+  const c = 1.70158 + 1
+  return 1 + c * Math.pow(t - 1, 3) + 1.70158 * Math.pow(t - 1, 2)
+}
 
 function hasWebGL() {
   try {
@@ -47,7 +63,7 @@ function Studio() {
   return null
 }
 
-function Helmet({ onReady }: { onReady: () => void }) {
+function Helmet({ onReady, pointer }: { onReady: () => void; pointer: RefObject<{ x: number; y: number }> }) {
   const { scene } = useGLTF(MODEL, '/draco/gltf/')
   const group = useRef<Group>(null)
   const start = useRef(0)
@@ -59,7 +75,7 @@ function Helmet({ onReady }: { onReady: () => void }) {
     const box = new Box3().setFromObject(scene)
     const c = box.getCenter(new Vector3())
     const size = box.getSize(new Vector3())
-    return { offset: new Vector3(-c.x, -c.y, -c.z), scale: 2.1 / Math.max(size.x, size.y, size.z) }
+    return { offset: new Vector3(-c.x, -c.y, -c.z), scale: 1.5 / Math.max(size.x, size.y, size.z) }
   }, [scene])
 
   useEffect(() => {
@@ -67,17 +83,32 @@ function Helmet({ onReady }: { onReady: () => void }) {
     onReady()
   }, [onReady])
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const g = group.current
     if (!g) return
     g.rotation.y += TURN * delta
-    const t = easeOut(clamp01((performance.now() - start.current) / IN_MS))
-    g.scale.setScalar(fit.scale * (0.94 + 0.06 * t))
-    g.position.y = (1 - t) * -0.25
+
+    const t = clamp01((performance.now() - start.current) / IN_MS)
+    g.scale.setScalar(fit.scale * popOut(t))
+
+    // Reach is measured off the live viewport, in world units, so the helmet
+    // actually crosses the frame to meet the cursor at any window size.
+    const reachX = Math.max(state.viewport.width / 2 - MARGIN, 0) * FOLLOW_X
+    const reachY = Math.max(state.viewport.height / 2 - MARGIN, 0) * FOLLOW_Y
+
+    // Damped follow. delta-scaled so the approach is the same at any framerate.
+    const k = 1 - Math.exp(-EASE * delta)
+    const px = pointer.current?.x ?? 0
+    const py = pointer.current?.y ?? 0
+    g.position.x += (px * reachX - g.position.x) * k
+    g.position.y += (py * reachY - g.position.y) * k
+    // A little tilt into the move, so it turns toward you rather than sliding.
+    g.rotation.z += (-px * 0.16 - g.rotation.z) * k
+    g.rotation.x += (-py * 0.2 - g.rotation.x) * k
   })
 
   return (
-    <group ref={group} scale={fit.scale}>
+    <group ref={group} scale={0}>
       <primitive object={scene} position={fit.offset} />
     </group>
   )
@@ -88,6 +119,23 @@ export function Helmet3D() {
   const [failed, setFailed] = useState(() => !hasWebGL())
   const [ready, setReady] = useState(false)
   const wrap = useRef<HTMLDivElement>(null)
+  /** Pointer position relative to the canvas centre, -1..1. Tracked on the
+   *  window rather than the canvas so the helmet keeps following once the
+   *  cursor leaves its box — which, given how small the box is, is most of the
+   *  time. A ref, not state: this updates on every mouse move. */
+  const pointer = useRef({ x: 0, y: 0 })
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const el = wrap.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      pointer.current.x = Math.max(-1, Math.min((e.clientX - (r.left + r.width / 2)) / (r.width / 2), 1))
+      pointer.current.y = Math.max(-1, Math.min(((r.top + r.height / 2) - e.clientY) / (r.height / 2), 1))
+    }
+    window.addEventListener('pointermove', onMove, { passive: true })
+    return () => window.removeEventListener('pointermove', onMove)
+  }, [])
 
   useEffect(() => {
     const el = wrap.current
@@ -127,7 +175,7 @@ export function Helmet3D() {
         <pointLight position={[2.6, 3, 3.4]} intensity={18} color="#fff1e2" distance={18} decay={1.6} />
         <pointLight position={[-3, 0.6, -2.4]} intensity={10} color="#ff8a3d" distance={16} decay={1.6} />
         <Suspense fallback={null}>
-          <Helmet onReady={() => setReady(true)} />
+          <Helmet onReady={() => setReady(true)} pointer={pointer} />
         </Suspense>
       </Canvas>
     </div>
