@@ -7,9 +7,6 @@ import { Link, useNavigate } from 'react-router-dom'
 const HeroCar3D = lazy(() =>
   import('../components/HeroCar3D').then((m) => ({ default: m.HeroCar3D })),
 )
-const Helmet3D = lazy(() =>
-  import('../components/Helmet3D').then((m) => ({ default: m.Helmet3D })),
-)
 
 
 import { LifeField } from '../components/LifeField'
@@ -167,12 +164,6 @@ export function Landing() {
             opacity 0 in browsers that take the native scroll-timeline path,
             where `is-in` is never added. */}
         <section id="what" className="gh-section" ref={whatRef}>
-          {/* Lazy like the car: three.js is already loaded by then, but the
-              model and its decode should not sit in the critical path. */}
-          <Suspense fallback={null}>
-            <Helmet3D />
-          </Suspense>
-
           {/* The ask sits above the card, not inside it. */}
           <div className="section-cta reveal r1" ref={ctaRef}>
             <EmailCapture />

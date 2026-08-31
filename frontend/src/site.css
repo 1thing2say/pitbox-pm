@@ -1356,26 +1356,6 @@
 .bezel-head .gh-h {
   margin-bottom: 14px;
 }
-/* The helmet, over the section glow and above the ask. Sized in vh as much as
-   px so it keeps its proportion to the fold rather than swallowing a short
-   viewport. */
-.helmet {
-  position: relative;
-  z-index: 1;
-  height: clamp(130px, 18vh, 200px);
-  margin: 0 auto;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-.helmet.is-ready {
-  opacity: 1;
-}
-.helmet canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
 /* The access row, sitting above the card rather than inside it. */
 .section-cta {
   margin: clamp(26px, 4vh, 46px) 0 0;
