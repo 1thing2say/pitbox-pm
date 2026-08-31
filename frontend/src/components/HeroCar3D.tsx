@@ -153,6 +153,10 @@ function Buggy({
     return new Vector3(-c.x, -c.y, -c.z)
   }, [scene])
 
+  useEffect(() => () => {
+    delete document.documentElement.dataset.carGone
+  }, [])
+
   useFrame(() => {
     const g = group.current
     if (!g) return
@@ -177,6 +181,9 @@ function Buggy({
       if (driveStart.current == null) {
         driveStart.current = performance.now()
         departed.current = true
+        // The pool of light under the car is scroll-driven in CSS; this is how
+        // it learns the car is not coming back.
+        document.documentElement.dataset.carGone = 'true'
       }
       // Time-based, so it drives away by itself once the spin completes.
       const q = clamp01((performance.now() - driveStart.current) / DRIVE_MS)

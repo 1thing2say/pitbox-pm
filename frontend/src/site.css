@@ -103,17 +103,44 @@
   transition-delay: 0.12s;
 }
 
+/* The handoff is one-way, like the car's exit that triggers it. Once the car
+   has gone the header stays complete no matter how far back up you scroll, and
+   the hero's own pair never returns — otherwise the same two buttons would be
+   offered twice again. These match the 'active' rules above on specificity, so
+   they have to come after them to win. */
+:root[data-car-gone] .site-nav .brand-inner,
+:root[data-car-gone] .site-nav .nav-tracker,
+:root[data-car-gone] .site-nav .site-links a,
+:root[data-car-gone] .site-nav .nav-sep,
+:root[data-car-gone] .site-nav .nav-burger {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+:root[data-car-gone] .site-nav.scrolled {
+  background: rgba(14, 15, 18, 0.82);
+  backdrop-filter: blur(10px);
+  border-bottom-color: var(--border);
+}
+:root[data-car-gone] .hero-cta {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* The header's actions while the hero owns the screen: under the car, fading
    out on the same progress that brings the bar in, so the same two buttons are
    never offered twice at once. The fade is on .hero-cta (scroll-driven) and
    the entrance on its children, because an animation and a declared value
    cannot share one property. */
 .hero-cta {
-  position: absolute;
-  bottom: 150px;
-  left: 50%;
-  transform: translateX(-50%);
+  /* A grid item under .hero-mark rather than pinned to the floor of the stage,
+     so it sits directly beneath the wordmark. The mark's negative margin
+     cancels its own halo padding, which puts this right at the glyph feet —
+     the margin here is the only gap. */
+  position: relative;
   z-index: 7;
+  margin-top: clamp(18px, 3vh, 40px);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -573,6 +600,11 @@
   opacity: clamp(0, calc((0.66 - var(--cardp)) / 0.2), 1);
   pointer-events: none;
 }
+/* Once the car has gone the pool never comes back, however far you scroll up —
+   a shadow with nothing casting it. */
+:root[data-car-gone] .hero-car::before {
+  opacity: 0;
+}
 /* Shown only if the browser cannot give us a WebGL context at all. Keeps the
    ground pool so the hero still has a focal point instead of a void. */
 .hero-car-fallback {
@@ -962,7 +994,7 @@
   background-color: var(--bg-soft);
   /* No top padding: .foot-news already carries it, and the two stacked left a
      dead band above the wordmark. */
-  padding: 0 0 26px;
+  padding: 0 0 18px;
 }
 .site-footer-inner {
   width: var(--shell);
@@ -988,8 +1020,8 @@
 .foot-links a:hover { color: var(--text); }
 .foot-note {
   width: var(--shell);
-  margin: 26px auto 0;
-  padding-top: 18px;
+  margin: 0 auto;
+  padding-top: 14px;
   border-top: 1px solid var(--border);
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -1247,8 +1279,12 @@
 .bezel {
   position: relative;
   z-index: 1;
-  border-radius: 22px;
+  /* Square at the foot, with no bottom edge: the card is the last thing on the
+     page, so it runs off into the footer instead of closing with two corners
+     hanging in space. */
+  border-radius: 22px 22px 0 0;
   border: 1px solid var(--border);
+  border-bottom: 0;
   background: linear-gradient(180deg, rgba(28, 31, 38, 0.82), rgba(14, 15, 18, 0.96));
   overflow: hidden;
   text-align: left;
@@ -1268,13 +1304,20 @@
 }
 .bezel > * { position: relative; z-index: 1; }
 .bezel-pad { padding: clamp(22px, 3.4vw, 40px); }
-/* The request-access row, moved inside the card. Ruled off from the specs
-   above it and centred, since the card's own copy is left-aligned and this is
-   an invitation rather than more prose. */
-.bezel-cta {
-  border-top: 1px solid var(--border);
+/* The section's heading now lives inside the card, so it is centred and ruled
+   off from the specs below it rather than sitting on the page above. */
+.bezel-head {
+  text-align: center;
+  border-bottom: 1px solid var(--border);
 }
-.bezel-cta .emailcap-row {
+.bezel-head .gh-h {
+  margin-bottom: 14px;
+}
+/* The access row, sitting above the card rather than inside it. */
+.section-cta {
+  margin: clamp(26px, 4vh, 46px) 0 0;
+}
+.section-cta .emailcap-row {
   justify-content: center;
   margin: 0;
 }
@@ -1657,7 +1700,7 @@ blockquote.q {
 }
 
 /* --- Footer, four columns + legal bar --- */
-.foot-news { padding: clamp(40px, 6vw, 70px) 0 0; }
+.foot-news { padding: clamp(28px, 4vw, 46px) 0 0; }
 /* Spacing lived in inline styles, which left the button crowding the sentence
    above it. Kept here so the rhythm is visible in one place. */
 .foot-news .site-brand { margin-bottom: 20px; }
@@ -1693,14 +1736,14 @@ blockquote.q {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: clamp(20px, 3vw, 48px);
-  padding: clamp(34px, 5vw, 62px) 0;
-  margin-top: clamp(30px, 5vw, 56px);
+  padding: clamp(22px, 3vw, 38px) 0 clamp(20px, 3vw, 34px);
+  margin-top: clamp(18px, 2.4vw, 30px);
 }
 /* Each column carries its own rule, so the gaps in the grid break the line
    into segments rather than running one hairline edge to edge. */
 .foot-col {
   border-top: 1px solid var(--border);
-  padding-top: 22px;
+  padding-top: 18px;
 }
 .foot-col h4 {
   font-size: 0.78rem;
@@ -1718,7 +1761,7 @@ blockquote.q {
   flex-wrap: wrap;
   gap: 10px 26px;
   align-items: center;
-  padding: 22px 0 34px;
+  padding: 16px 0 18px;
   border-top: 1px solid var(--border);
   font-family: var(--font-mono);
   font-size: 0.72rem;
