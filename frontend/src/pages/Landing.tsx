@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Suspense, lazy } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -87,7 +87,14 @@ function EmailCapture() {
 
 export function Landing() {
   const { sectionRef, stageRef, progressRef, subscribe } = useHeroScroll()
-  const whatRef = useReveal<HTMLElement>()
+  const whatRef = useRef<HTMLElement>(null)
+  // Staggered, so the card arrives and then fills in rather than everything
+  // landing at once. The delays only apply on the observer path; the native
+  // path staggers with animation-range instead.
+  const ctaRef = useReveal<HTMLDivElement>(0)
+  const cardRef = useReveal<HTMLDivElement>(90)
+  const headRef = useReveal<HTMLHeadingElement>(190)
+  const subRef = useReveal<HTMLParagraphElement>(270)
 
   return (
     <div className="site">
@@ -151,19 +158,25 @@ export function Landing() {
           </div>
         </section>
 
-        {/* ===== What is Baja SAE — the page's one content block ===== */}
-        <section id="what" className="gh-section reveal" ref={whatRef}>
+        {/* ===== What is Baja SAE — the page's one content block =====
+            Each piece carries its own reveal rather than one on the section.
+            A single observer plus descendant rules would strand the children at
+            opacity 0 in browsers that take the native scroll-timeline path,
+            where `is-in` is never added. */}
+        <section id="what" className="gh-section" ref={whatRef}>
           {/* The ask sits above the card, not inside it. */}
-          <div className="section-cta">
+          <div className="section-cta reveal r1" ref={ctaRef}>
             <EmailCapture />
           </div>
 
           <div className="gh-stage">
             <Starfield className="glow-stars" />
-            <div className="bezel">
+            <div className="bezel reveal r2" ref={cardRef}>
               <div className="bezel-pad bezel-head">
-                <h2 className="gh-h">Built and raced by students, judged by engineers</h2>
-                <p className="gh-sub">
+                <h2 className="gh-h reveal r3" ref={headRef}>
+                  Built and raced by students, judged by engineers
+                </h2>
+                <p className="gh-sub reveal r4" ref={subRef}>
                   An intercollegiate competition run by SAE International, part of its
                   Collegiate Design Series.
                 </p>
@@ -174,7 +187,9 @@ export function Landing() {
 
       </main>
 
-      <SiteFooter />
+      {/* The spacer is what gives the fixed footer room to be uncovered. */}
+      <div className="foot-spacer" aria-hidden="true" />
+      <SiteFooter reveal />
     </div>
   )
 }

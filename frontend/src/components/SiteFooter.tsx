@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 
+import { useFooterReveal } from '../hooks/useFooterReveal'
 import { Wordmark } from './Wordmark'
 
 /**
@@ -43,9 +44,12 @@ const COLUMNS = [
   },
 ]
 
-export function SiteFooter() {
+export function SiteFooter({ reveal = false }: { reveal?: boolean } = {}) {
+  // Only the landing page runs the under-page reveal; everywhere else the
+  // footer is an ordinary block at the end of the document.
+  const ref = useFooterReveal<HTMLElement>()
   return (
-    <footer className="site-footer">
+    <footer className={reveal ? 'site-footer footer-reveal' : 'site-footer'} ref={reveal ? ref : undefined}>
       <div className="site-footer-inner" style={{ display: 'block' }}>
         <div className="foot-news">
           <Link to="/" className="site-brand" style={{ marginBottom: 18 }}>
