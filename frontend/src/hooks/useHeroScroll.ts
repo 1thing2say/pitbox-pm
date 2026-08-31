@@ -69,10 +69,10 @@ export function useHeroScroll() {
       stage.style.setProperty('--p', p.toFixed(4))
       progressRef.current = p
       listeners.forEach((fn) => fn(p))
-      // Just past SPIN_END in HeroCar3D (0.66), where the spin lands side-on
+      // Just past SPIN_END in HeroCar3D (0.42), where the turn lands side-on
       // and the car starts its exit — so the header fills in behind a car that
       // is already leaving, not one still turning in the middle of the stage.
-      root.dataset.hero = p > 0.72 ? 'passed' : 'active'
+      root.dataset.hero = p > 0.5 ? 'passed' : 'active'
     }
 
     const onScroll = () => {

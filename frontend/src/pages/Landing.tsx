@@ -12,12 +12,8 @@ const HeroCar3D = lazy(() =>
 import {
   FeatureAccordion,
   PhaseTabs,
-  SponsorMarquee,
-  StatRow,
-  SubsystemCards,
-  TeamQuote,
 } from '../components/LandingSections'
-// import { LifeField } from '../components/LifeField'
+import { LifeField } from '../components/LifeField'
 import { Starfield } from '../components/Starfield'
 import { SiteFooter } from '../components/SiteFooter'
 import { SiteNav } from '../components/SiteNav'
@@ -206,11 +202,11 @@ export function Landing() {
               style={{ contain: 'layout style paint' }}
               aria-hidden="true"
             >
-              {/* <LifeField className="hero-life" /> */}
-              <div className="hero-grids">
+              <LifeField className="hero-life" />
+              {/* <div className="hero-grids">
                 <span className="grid-a" />
                 <span className="grid-b" />
-              </div>
+              </div> */}
               <div className="hero-mask" />
               <Starfield />
               <div className="hero-bottom" />
@@ -254,7 +250,6 @@ export function Landing() {
           <EmailCapture />
         </section>
 
-        <SponsorMarquee />
 
         {/* ===== What is Baja SAE ===== */}
         <GhSection
@@ -400,9 +395,6 @@ export function Landing() {
           </div>
         </GhSection>
 
-        <section className="gh-section">
-          <StatRow />
-        </section>
 
         {/* ===== The tool ===== */}
         <GhSection
@@ -488,22 +480,8 @@ export function Landing() {
           </div>
         </GhSection>
 
-        {/* ===== Quote, subsystem cards, closing CTA ===== */}
-        <section className="gh-section tail">
-          <TeamQuote />
-        </section>
 
-        <section className="gh-section">
-          <h2 className="gh-h">Every subsystem, one tree</h2>
-          <p className="gh-sub">
-            The car breaks down the same way the team does. Each branch owns its own
-            parts, statuses and files.
-          </p>
-          <div style={{ marginTop: 'clamp(30px, 5vw, 56px)' }}>
-            <SubsystemCards />
-          </div>
-        </section>
-
+        {/* ===== Closing CTA ===== */}
         <section className="closing">
           <h2 className="gh-h">Every part of the car, in one place</h2>
           <p className="gh-sub">

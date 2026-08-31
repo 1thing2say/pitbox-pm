@@ -3,6 +3,7 @@ import { useGLTF } from '@react-three/drei'
 import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
   Box3,
+  DoubleSide,
   Group,
   Mesh,
   MeshStandardMaterial,
@@ -27,9 +28,9 @@ const wantsLight = () =>
 /** Rotation (radians) at which the car faces the camera. */
 const FRONT = 0
 const QUARTER = Math.PI / 2
-/** Scroll spins a full revolution and lands side-on, then the car leaves. */
-const SCROLL_SPIN = Math.PI * 2 + QUARTER
-const SPIN_END = 0.66
+/** Scroll turns a quarter onto the profile, then the car leaves. */
+const SCROLL_SPIN = QUARTER
+const SPIN_END = 0.42
 /** Turning +90deg from FRONT points the nose at screen RIGHT, so it leaves to
  *  the right. (The GLB winds the opposite way to the pre-rendered turntable —
  *  that mismatch is what made this read as reverse.) */
@@ -45,12 +46,14 @@ const INTRO_TURNS = 1.5
  *  densest around the silhouette and the roll cage. */
 const BODY_COLOR = '#ff7413'
 const GLOW_COLOR = '#ff4200'
-/** Opaque. The translucent version blended every triangle with depth-writing
- *  off, so nothing could be depth-rejected and the whole 260k-vertex car was
- *  drawn as overdraw — by far the most expensive thing on the page. Solid
- *  geometry lets the depth buffer throw away everything hidden behind the
- *  bodywork, and the glow comes from emission instead of accumulation. */
-const GLOW_MAX = 1.45
+/** Translucent again, by request. Worth knowing what it costs: with depth
+ *  writing off nothing can be depth-rejected, so every triangle of the car is
+ *  blended and both faces are drawn — the single most expensive thing on the
+ *  page. The accumulation is also the effect: overlapping shells build up, so
+ *  the roll cage and silhouette read denser than the flat panels. */
+const OPACITY_DARK = 0.12
+const OPACITY_LIT = 0.38
+const GLOW_MAX = 1.9
 /** Unveil: lights come up from below and the scene brightens. */
 const UNVEIL_MS = 2600
 const UNVEIL_DELAY = 250
@@ -124,6 +127,10 @@ function Buggy({
         emissiveIntensity: 0,
         metalness: 0,
         roughness: 0.46,
+        transparent: true,
+        opacity: OPACITY_DARK,
+        depthWrite: false,
+        side: DoubleSide,
       }),
     [],
   )
@@ -147,9 +154,12 @@ function Buggy({
     if (!g) return
     const introT = phase.current.introT
 
-    // The unveil is now entirely emission plus the light rig — the body is
-    // solid from the first frame and simply starts unlit.
-    material.emissiveIntensity = easeOut(phase.current.unveilT) * GLOW_MAX
+    // The unveil runs through the body itself: never fully transparent, so the
+    // dark glass silhouette is there from the first frame and what comes up is
+    // the emission, not the body fading in.
+    const u = easeOut(phase.current.unveilT)
+    material.opacity = lerp(OPACITY_DARK, OPACITY_LIT, u)
+    material.emissiveIntensity = u * GLOW_MAX
 
     const p = clamp01(progress.current ?? 0)
     const introOffset = (easeOut(introT) - 1) * INTRO_TURNS * Math.PI * 2
@@ -200,7 +210,7 @@ function UnveilRig({ phase }: { phase: RefObject<Phase> }) {
       // Brightest mid-sweep, then hands off to the key light.
       sweep.current.intensity = 9 * Math.sin(Math.PI * clamp01(t)) + 1
     }
-    if (key.current) key.current.intensity = lerp(0, 7, clamp01((t - 0.25) / 0.75))
+    if (key.current) key.current.intensity = lerp(0, 4.5, clamp01((t - 0.25) / 0.75))
     if (rim.current) rim.current.intensity = lerp(0, 5, clamp01((t - 0.4) / 0.6))
   })
 

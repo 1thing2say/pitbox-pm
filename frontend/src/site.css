@@ -62,28 +62,28 @@
 
    Transitions rather than keyframes: the state can be scrubbed backwards by
    scrolling up, and a keyframe would have to be restarted to do that. */
-:root[data-hero] .brand-inner,
-:root[data-hero] .site-links a:not(.btn),
-:root[data-hero] .nav-sep {
+:root[data-hero] .site-nav .brand-inner,
+:root[data-hero] .site-nav .site-links a:not(.btn),
+:root[data-hero] .site-nav .nav-sep {
   transition:
     opacity 0.45s ease,
     transform 0.6s cubic-bezier(0.2, 0.85, 0.25, 1);
 }
-:root[data-hero='active'] .brand-inner {
+:root[data-hero='active'] .site-nav .brand-inner {
   opacity: 0;
   /* Above the header, clipped by .site-brand's overflow, so it arrives through
      the top edge rather than sliding over the page. */
   transform: translateY(-125%);
 }
-:root[data-hero='active'] .site-links a:not(.btn),
-:root[data-hero='active'] .nav-sep {
+:root[data-hero='active'] .site-nav .site-links a:not(.btn),
+:root[data-hero='active'] .site-nav .nav-sep {
   opacity: 0;
   transform: translateY(-7px);
   pointer-events: none;
 }
 /* The links settle just behind the brand rather than with it. */
-:root[data-hero='passed'] .site-links a:not(.btn),
-:root[data-hero='passed'] .nav-sep {
+:root[data-hero='passed'] .site-nav .site-links a:not(.btn),
+:root[data-hero='passed'] .site-nav .nav-sep {
   transition-delay: 0.12s;
 }
 .wordmark-mark {
@@ -176,6 +176,9 @@
   --cardp: clamp(0, calc((var(--p) - 0.28) / 0.5), 1);
   /* Grid pitch, shared by both backdrop layers. */
   --cell: 64px;
+  /* When the scroll cue appears: after INTRO_MS (2300ms) in HeroCar3D, so the
+     opening turn has landed. */
+  --cue-in: 2.5s;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -267,9 +270,9 @@
   z-index: 1;
   background: radial-gradient(
     ellipse at 50% 46%,
-    color-mix(in srgb, var(--bg) 10%, transparent) 0%,
-    color-mix(in srgb, var(--bg) 40%, transparent) 45%,
-    color-mix(in srgb, var(--bg) 88%, transparent) 100%
+    color-mix(in srgb, var(--bg) 30%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 58%, transparent) 45%,
+    color-mix(in srgb, var(--bg) 94%, transparent) 100%
   );
 }
 .hero-stars {
@@ -403,14 +406,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  /* Static bloom behind the car. It never changes, so it is rasterised once
-     and then just composited. */
-  background: radial-gradient(
-    ellipse 46% 38% at 50% 62%,
-    rgba(255, 106, 26, 0.2),
-    rgba(255, 106, 26, 0.07) 55%,
-    transparent 72%
-  );
+
   /* Lifted off the floor of the stage so the roll cage runs up behind the
      lettering — the car and the wordmark share vertical space rather than
      stacking. */
@@ -423,20 +419,24 @@
   pointer-events: none;
   animation: car-in 1.1s 0.5s ease both;
 }
-/* A soft pool of light so the car reads as standing on something. */
+/* A soft pool of light so the car reads as standing on something. It goes out
+   as the card climbs into it: a shadow spilling onto a solid panel sliding over
+   the top reads as a mistake. Only opacity changes, so this stays a
+   compositor-only animation. */
 .hero-car::before {
   content: '';
   position: absolute;
   left: 50%;
-  bottom: 8%;
-  width: min(760px, 78%);
-  height: 130px;
+  bottom: 22%;
+  width: min(700px, 72%);
+  height: 120px;
   transform: translateX(-50%);
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 138, 61, 0.16),
+    rgba(255, 138, 61, 0.18),
     transparent 70%
   );
+  opacity: clamp(0, calc((0.66 - var(--cardp)) / 0.2), 1);
   pointer-events: none;
 }
 /* Shown only if the browser cannot give us a WebGL context at all. Keeps the
@@ -496,10 +496,24 @@
   color: var(--text-muted);
   pointer-events: none;
 }
+/* Held back until the car has finished its opening turn — the cue is an
+   invitation to scroll, and offering it while the reveal is still running asks
+   the visitor to leave before they have seen anything. It fades in on the
+   children rather than .hero-cue itself, whose opacity is already driven by
+   scroll; a second animation on the same property would override that. */
+.hero-cue span {
+  animation: cue-in 0.5s ease var(--cue-in) both;
+}
 .hero-cue svg {
   width: 16px;
   height: 16px;
-  animation: cue-bob 2s ease-in-out infinite;
+  animation:
+    cue-in 0.5s ease var(--cue-in) both,
+    cue-bob 2s ease-in-out var(--cue-in) infinite;
+}
+@keyframes cue-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 @keyframes cue-bob {
   0%, 100% { transform: translateY(0); }
@@ -789,7 +803,9 @@
   margin-top: auto;
   border-top: 1px solid var(--border);
   background: var(--bg-soft);
-  padding: 40px 0 26px;
+  /* No top padding: .foot-news already carries it, and the two stacked left a
+     dead band above the wordmark. */
+  padding: 0 0 26px;
 }
 .site-footer-inner {
   width: var(--shell);
@@ -913,8 +929,8 @@
   /* The links live in the burger panel here, not the bar, so gating them on
      scroll would mean opening the menu over the hero shows an empty panel.
      Only the brand keeps its entrance. */
-  :root[data-hero='active'] .site-links a:not(.btn),
-  :root[data-hero='active'] .nav-sep {
+  :root[data-hero='active'] .site-nav .site-links a:not(.btn),
+  :root[data-hero='active'] .site-nav .nav-sep {
     opacity: 1;
     transform: none;
     pointer-events: auto;
@@ -966,9 +982,10 @@
   .hero-grids .grid-b { animation: none; }
   /* useHeroScroll parks data-hero at 'passed' under reduced motion, so the
      header is complete from the start; kill the movement too. */
-  :root[data-hero] .brand-inner,
-  :root[data-hero] .site-links a:not(.btn),
-  :root[data-hero] .nav-sep { transition: none; }
+  :root[data-hero] .site-nav .brand-inner,
+  :root[data-hero] .site-nav .site-links a:not(.btn),
+  :root[data-hero] .site-nav .nav-sep { transition: none; }
+  .hero-cue span,
   .hero-cue svg { animation: none; }
   .hero-car { animation: none; }
   .hero-stars span { animation: none; opacity: 0.7; }
@@ -1461,6 +1478,20 @@ blockquote.q {
 
 /* --- Footer, four columns + legal bar --- */
 .foot-news { padding: clamp(40px, 6vw, 70px) 0 0; }
+/* Spacing lived in inline styles, which left the button crowding the sentence
+   above it. Kept here so the rhythm is visible in one place. */
+.foot-news .site-brand { margin-bottom: 20px; }
+.foot-news .foot-kicker { margin: 0; }
+.foot-news .muted {
+  margin: 14px 0 0;
+  max-width: 46ch;
+  line-height: 1.65;
+}
+.foot-news .btn {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 26px;
+}
 .foot-kicker {
   display: flex;
   align-items: center;
@@ -1483,8 +1514,22 @@ blockquote.q {
   grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
   gap: clamp(20px, 3vw, 48px);
   padding: clamp(34px, 5vw, 62px) 0;
-  border-top: 1px solid var(--border);
   margin-top: clamp(30px, 5vw, 56px);
+  /* The rule is drawn as a background hairline rather than a border so it can
+     carry a gradient: accent at the left, under the wordmark and the kicker's
+     orange tick, settling into the ordinary border colour by mid-width. A flat
+     orange line straight across is louder than the footer wants. */
+  background-image: linear-gradient(
+    90deg,
+    var(--accent) 0%,
+    var(--accent) 26%,
+    rgba(255, 106, 26, 0.5) 44%,
+    var(--border) 68%,
+    var(--border) 100%
+  );
+  background-size: 100% 1px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
 }
 .foot-col h4 {
   font-size: 0.78rem;
