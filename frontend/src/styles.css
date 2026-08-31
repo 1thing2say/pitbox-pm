@@ -2,6 +2,21 @@
    Dark-only by design: this is a shop tool that lives on a screen next to the
    car, and the team identity is dark. Dirt-orange accent, Oswald + Inter. */
 
+/* Metric-matched stand-in for Oswald, used only for the moment before the
+   webfont arrives. Oswald is condensed; system-ui is not, so the untouched
+   fallback renders the hero wordmark far wider than the viewport — it
+   overflowed its grid column and dragged the whole hero flush left on first
+   paint. size-adjust brings the fallback's advance widths close enough that
+   the line fits, and the swap barely moves. */
+@font-face {
+  font-family: 'Oswald fallback';
+  src: local('Arial Narrow'), local('Helvetica Neue Condensed Bold'), local('Arial');
+  size-adjust: 76%;
+  ascent-override: 105%;
+  descent-override: 25%;
+  line-gap-override: 0%;
+}
+
 :root {
   --bg: #0e0f12;
   --bg-soft: #15171c;
@@ -22,7 +37,7 @@
   --tree-edge-strong: var(--accent);
   --radius: 12px;
   --radius-sm: 8px;
-  --font-head: 'Oswald', system-ui, sans-serif;
+  --font-head: 'Oswald', 'Oswald fallback', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
 

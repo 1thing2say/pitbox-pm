@@ -1,6 +1,14 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
-import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from 'react'
 import {
   Box3,
   DoubleSide,
@@ -106,9 +114,11 @@ type Phase = { introT: number; unveilT: number }
 function Buggy({
   progress,
   phase,
+  onReady,
 }: {
   progress: RefObject<number>
   phase: RefObject<Phase>
+  onReady: () => void
 }) {
   // Decided once per mount: swapping the URL mid-life would re-suspend and
   // restart the intro.
@@ -156,6 +166,12 @@ function Buggy({
   useEffect(() => () => {
     delete document.documentElement.dataset.carGone
   }, [])
+
+  // Draco decoding takes ~2s after the GLB lands, and this component is
+  // suspended for all of it. Signalling here — the first mount after the model
+  // resolves — is what lets the unveil start when there is something to
+  // unveil, instead of running down while the stage is still empty.
+  useEffect(onReady, [onReady])
 
   useFrame(() => {
     const g = group.current
@@ -239,9 +255,10 @@ function Scene({ progress }: { progress: RefObject<number> }) {
   const phase = useRef<Phase>({ introT: 0, unveilT: 0 })
   const start = useRef(0)
 
-  // Started from an effect, not during render — performance.now() in a render
-  // body is impure and gives a different clock on every re-render.
-  useEffect(() => {
+  // Set when the model is ready, not on mount: starting here would spend the
+  // unveil on an empty stage and the car would appear already lit. Not during
+  // render either — performance.now() in a render body is impure.
+  const onReady = useCallback(() => {
     start.current = performance.now()
   }, [])
 
@@ -257,7 +274,7 @@ function Scene({ progress }: { progress: RefObject<number> }) {
       <StudioEnvironment phase={phase} />
       <UnveilRig phase={phase} />
       <Suspense fallback={null}>
-        <Buggy progress={progress} phase={phase} />
+        <Buggy progress={progress} phase={phase} onReady={onReady} />
       </Suspense>
     </>
   )

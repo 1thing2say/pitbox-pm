@@ -265,14 +265,6 @@
   /* How far the card has risen, 0..1. Lives here rather than on .hero-card so
      the wordmark can read it too. */
   --cardp: clamp(0, calc((var(--p) - 0.28) / 0.5), 1);
-}
-/* Part of the same one-way handoff as the car. Once it has gone the card never
-   drops all the way back down: scrolling to the top leaves it parked partway
-   up, so the page you return to is the one after the reveal, not a rerun of
-   the intro. The floor is the wipe's own threshold, so the wordmark sits
-   exactly at the start of its fade — whole, but no longer untouched. */
-:root[data-car-gone] .hero-stage {
-  --cardp: clamp(0.62, calc((var(--p) - 0.28) / 0.5), 1);
   /* Grid pitch, shared by both backdrop layers. */
   --cell: 64px;
   /* When the scroll cue appears: after INTRO_MS (2300ms) in HeroCar3D, so the
@@ -286,7 +278,18 @@
   /* Mark sits high, not centred: the lower half of the stage is reserved for
      the car so the two never fight for the same space. */
   place-items: start center;
+  /* The column can never be wider than the stage. Without this, a wordmark
+     whose max-content exceeds the viewport (which it does until the webfont
+     loads) grows the implicit column and takes every other item with it. */
+  grid-template-columns: minmax(0, 100%);
   padding-top: calc(clamp(72px, 15vh, 170px) + var(--nav-h));
+}
+/* Part of the same one-way handoff as the car. Once it has gone the card never
+   drops all the way back down: scrolling to the top leaves it parked partway
+   up, so the page you return to is the one after the reveal, not a rerun of
+   the intro. Nothing else belongs in this rule — it overrides one value. */
+:root[data-car-gone] .hero-stage {
+  --cardp: clamp(0.48, calc((var(--p) - 0.28) / 0.5), 1);
 }
 
 /* Backdrop: the live grid, a radial mask that keeps it strongest behind the
@@ -452,6 +455,7 @@
      it does not cover, so without that room the halo is sliced off square and
      the text sits in a visible bright rectangle. */
   font-size: clamp(3.4rem, 19vw, 16rem);
+  text-align: center;
   padding: 0.62em 24px;
   /* Wiped out from the bottom rather than blurred: a mask edge travels up
      through the glyphs, so the letters stay perfectly sharp and simply stop
@@ -986,6 +990,11 @@
   bottom: 0;
   z-index: 0;
   opacity: var(--footp, 1);
+  /* Out of focus while it is still buried, resolving as it is uncovered. The
+     radius is deliberately small: this is a filter on a full-width layer, so
+     it repaints while the value changes. It only changes over the last screen
+     of scrolling, which bounds the cost. */
+  filter: blur(calc((1 - var(--footp, 1)) * 10px));
 }
 .foot-spacer {
   height: var(--foot-h, 0px);
@@ -1314,6 +1323,12 @@
   border-radius: 22px 22px 0 0;
   border: 1px solid var(--border);
   border-bottom: 0;
+  /* The side borders fade out before the foot, so the card dissolves into the
+     page instead of ending on two hard vertical strokes. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 72px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 72px), transparent 100%);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
   background: linear-gradient(180deg, rgba(28, 31, 38, 0.82), rgba(14, 15, 18, 0.96));
   overflow: hidden;
   text-align: left;
@@ -1337,7 +1352,6 @@
    off from the specs below it rather than sitting on the page above. */
 .bezel-head {
   text-align: center;
-  border-bottom: 1px solid var(--border);
 }
 .bezel-head .gh-h {
   margin-bottom: 14px;
