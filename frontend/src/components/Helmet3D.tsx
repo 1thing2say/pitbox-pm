@@ -5,20 +5,13 @@ import { Box3, Group, PMREMGenerator, Vector3 } from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 const MODEL = '/models/helmet.glb'
-/** A slow turn — one revolution a minute. Fast enough to read as alive,
- *  slow enough not to pull the eye off the copy underneath it. */
-const TURN = (Math.PI * 2) / 60
+/** How far the head turns to meet the cursor, in radians. It looks; it does
+ *  not move — the helmet stays centred in its frame. */
+const MAX_YAW = 0.62
+const MAX_PITCH = 0.34
+const MAX_ROLL = 0.1
 /** Pops in when the model is ready, not when the canvas mounts. */
 const IN_MS = 620
-/** How much of the frame it will cross to reach the pointer, as a fraction of
- *  the space available after its own size is accounted for. Fractions rather
- *  than world units: the canvas is very wide and very short, and its width in
- *  world units changes with the viewport, so a fixed offset that reads well at
- *  one size is invisible at another. */
-const FOLLOW_X = 0.92
-const FOLLOW_Y = 0.8
-/** Roughly the helmet's own half-size, kept clear of the frame edge. */
-const MARGIN = 0.85
 /** Per-frame approach rate. Damped rather than snapped, so a fast mouse does
  *  not throw it around. */
 const EASE = 6
@@ -83,28 +76,21 @@ function Helmet({ onReady, pointer }: { onReady: () => void; pointer: RefObject<
     onReady()
   }, [onReady])
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     const g = group.current
     if (!g) return
-    g.rotation.y += TURN * delta
 
     const t = clamp01((performance.now() - start.current) / IN_MS)
     g.scale.setScalar(fit.scale * popOut(t))
 
-    // Reach is measured off the live viewport, in world units, so the helmet
-    // actually crosses the frame to meet the cursor at any window size.
-    const reachX = Math.max(state.viewport.width / 2 - MARGIN, 0) * FOLLOW_X
-    const reachY = Math.max(state.viewport.height / 2 - MARGIN, 0) * FOLLOW_Y
-
-    // Damped follow. delta-scaled so the approach is the same at any framerate.
+    // Rotation only: the helmet holds its place and turns to face the cursor.
+    // Damped, and delta-scaled so the approach is the same at any framerate.
     const k = 1 - Math.exp(-EASE * delta)
     const px = pointer.current?.x ?? 0
     const py = pointer.current?.y ?? 0
-    g.position.x += (px * reachX - g.position.x) * k
-    g.position.y += (py * reachY - g.position.y) * k
-    // A little tilt into the move, so it turns toward you rather than sliding.
-    g.rotation.z += (-px * 0.16 - g.rotation.z) * k
-    g.rotation.x += (-py * 0.2 - g.rotation.x) * k
+    g.rotation.y += (px * MAX_YAW - g.rotation.y) * k
+    g.rotation.x += (-py * MAX_PITCH - g.rotation.x) * k
+    g.rotation.z += (-px * MAX_ROLL - g.rotation.z) * k
   })
 
   return (
