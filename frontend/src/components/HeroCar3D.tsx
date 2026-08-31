@@ -118,6 +118,10 @@ function Buggy({
 
   // Timestamp of the moment the spin finished; null until it does.
   const driveStart = useRef<number | null>(null)
+  /** The exit happens once. Scrolling back up rewinds the wordmark and the
+   *  card, but not this: a car that reverses back onto the stage undoes the
+   *  departure the visitor just watched. */
+  const departed = useRef(false)
 
   const material = useMemo(
     () =>
@@ -166,13 +170,14 @@ function Buggy({
 
     let spin: number
     let dx = 0
-    if (p <= SPIN_END) {
-      // Scrolling back up re-arms the departure.
-      driveStart.current = null
+    if (!departed.current && p <= SPIN_END) {
       spin = easeOut(p / SPIN_END) * SCROLL_SPIN
     } else {
       spin = SCROLL_SPIN
-      if (driveStart.current == null) driveStart.current = performance.now()
+      if (driveStart.current == null) {
+        driveStart.current = performance.now()
+        departed.current = true
+      }
       // Time-based, so it drives away by itself once the spin completes.
       const q = clamp01((performance.now() - driveStart.current) / DRIVE_MS)
       dx = EXIT_DIR * q * q * EXIT_DISTANCE

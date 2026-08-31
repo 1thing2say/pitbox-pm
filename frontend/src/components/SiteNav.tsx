@@ -42,22 +42,13 @@ export function SiteNav({ sticky = true }: { sticky?: boolean }) {
           <span />
         </button>
 
+        {/* Sits beside the wordmark rather than in the right-hand group: it is
+            a destination, not an account action. */}
+        <NavLink to="/app" className="nav-tracker" onClick={() => setOpen(false)}>
+          Tracker
+        </NavLink>
+
         <nav className={['site-links', open ? 'open' : ''].filter(Boolean).join(' ')}>
-          <a href="/#what" onClick={() => setOpen(false)}>
-            What is Baja?
-          </a>
-          <a href="/#competition" onClick={() => setOpen(false)}>
-            Competition
-          </a>
-          <a href="/#tool" onClick={() => setOpen(false)}>
-            The tool
-          </a>
-          <NavLink to="/app" onClick={() => setOpen(false)}>
-            Tracker
-          </NavLink>
-
-          <span className="nav-sep" aria-hidden="true" />
-
           <Link to="/login" className="btn btn-ghost" onClick={() => setOpen(false)}>
             Log in
           </Link>

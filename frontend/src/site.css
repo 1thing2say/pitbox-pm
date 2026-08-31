@@ -74,6 +74,7 @@
    Transitions rather than keyframes: the state can be scrubbed backwards by
    scrolling up, and a keyframe would have to be restarted to do that. */
 :root[data-hero] .site-nav .brand-inner,
+:root[data-hero] .site-nav .nav-tracker,
 :root[data-hero] .site-nav .site-links a,
 :root[data-hero] .site-nav .nav-sep,
 :root[data-hero] .site-nav .nav-burger {
@@ -87,6 +88,7 @@
      the top edge rather than sliding over the page. */
   transform: translateY(-125%);
 }
+:root[data-hero='active'] .site-nav .nav-tracker,
 :root[data-hero='active'] .site-nav .site-links a,
 :root[data-hero='active'] .site-nav .nav-sep,
 :root[data-hero='active'] .site-nav .nav-burger {
@@ -95,6 +97,7 @@
   pointer-events: none;
 }
 /* The links settle just behind the brand rather than with it. */
+:root[data-hero='passed'] .site-nav .nav-tracker,
 :root[data-hero='passed'] .site-nav .site-links a,
 :root[data-hero='passed'] .site-nav .nav-sep {
   transition-delay: 0.12s;
@@ -129,10 +132,6 @@
   pointer-events: none;
 }
 
-.wordmark-mark {
-  width: 26px;
-  height: 19px;
-}
 .wordmark-text {
   font-family: var(--font-head);
   font-size: 1.15rem;
@@ -145,6 +144,21 @@
 .wordmark-text b {
   color: var(--accent);
   font-weight: 600;
+}
+
+/* Beside the wordmark, before the auto margin that pushes the account actions
+   to the far right. White, not muted: with the other links gone it is the only
+   destination in the bar and should not read as secondary. */
+.nav-tracker {
+  margin-left: 26px;
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.92rem;
+  transition: color 0.15s;
+}
+.nav-tracker:hover,
+.nav-tracker.active {
+  color: var(--accent);
 }
 
 .site-links {
@@ -530,8 +544,8 @@
   /* Lifted off the floor of the stage so the roll cage runs up behind the
      lettering — the car and the wordmark share vertical space rather than
      stacking. */
-  bottom: 11%;
-  height: min(84%, 820px);
+  bottom: 3%;
+  height: min(80%, 780px);
   /* Above the rising card (5). The card now finishes climbing before the car
      has left, so if the car sat behind it the spin and the drive-off would
      both happen out of sight. */
@@ -1202,17 +1216,30 @@
   content: '';
   position: absolute;
   left: 50%;
-  top: -150px;
-  width: min(1120px, 112%);
-  height: 540px;
+  /* Anchored to the panel's top edge and rising from it: the box ends just
+     past that edge, and both ellipses are centred on it. A glow centred in the
+     middle of the box put its brightest part behind the panel, where none of
+     it could be seen. */
+  top: -430px;
+  width: min(1180px, 118%);
+  height: 470px;
   transform: translateX(-50%);
-  background: radial-gradient(
-    ellipse 46% 46% at 50% 52%,
-    rgba(255, 146, 70, 0.58),
-    rgba(255, 96, 28, 0.24) 40%,
-    transparent 70%
-  );
-  filter: blur(12px);
+  background:
+    /* Hot core, narrow and tall, sitting right on the edge. */
+    radial-gradient(
+      ellipse 26% 58% at 50% 100%,
+      rgba(255, 178, 112, 0.6),
+      rgba(255, 126, 46, 0.26) 46%,
+      transparent 74%
+    ),
+    /* The wide, dim spread that takes it out to the page. */
+    radial-gradient(
+      ellipse 64% 88% at 50% 104%,
+      rgba(255, 106, 26, 0.24),
+      rgba(255, 96, 28, 0.08) 52%,
+      transparent 76%
+    );
+  filter: blur(14px);
   pointer-events: none;
   z-index: 0;
 }
