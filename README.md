@@ -51,6 +51,27 @@ something to click. Delete `pitbox.db` to start over.
 
 Interactive API docs: **http://127.0.0.1:8000/docs**
 
+## Access
+
+Pit Box does not manage passwords. It runs behind **Cloudflare Access**, which
+gates the URL by email domain: anyone with a school address gets in, everyone
+else does not. A new member opens the link, Cloudflare emails them a code, and
+they appear in the roster automatically — no account to create, nothing to hand
+over at the end of the year but the Cloudflare login.
+
+Setup is in **[docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)**.
+
+`PITBOX_AUTH_MODE` picks how this works:
+
+| Mode | Meaning |
+|---|---|
+| `cloudflare` *(default)* | Cloudflare Access decides. The app must be reachable only through its tunnel. |
+| `password` | Built-in login, for running without Cloudflare. See `scripts/create_user.py`. |
+| `none` | No auth at all. Local development only — `dev.ps1` sets this. |
+
+The default fails closed: reached directly, the app returns 403 rather than
+serving your BOM to whoever found the port.
+
 ## What it does
 
 **Trees.** Create a tree from scratch, from the standard Baja subsystem template,
@@ -79,11 +100,13 @@ dashed pills with a jump-to-source button.
 | `app/models.py` | The schema. Start here. |
 | `app/tree.py` | All hierarchy mechanics — paths, moves, cloning, tag resolution |
 | `app/routers/` | The API |
+| `app/security.py` | Password hashing, sessions, the guard on every route |
 | `frontend/src/lib/filter.ts` | The filtering algorithm (React app) |
 | `static/js/filter.js` | The same algorithm, no-build version |
 | `docs/SCHEMA.md` | Why the tree is stored the way it is |
 | `docs/ARCHITECTURE.md` | Stack rationale and the design decisions behind it |
 | `docs/FRONTEND.md` | The two frontends, and how to run the Vite one |
+| `docs/CLOUDFLARE.md` | Tunnel + Access setup, and the security model |
 | `tests/test_api.py` | 26 tests over the parts that are easy to break |
 
 ## Tests

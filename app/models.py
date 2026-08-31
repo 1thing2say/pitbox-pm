@@ -73,8 +73,16 @@ ATTACHMENT_KINDS = ("datasheet", "cad", "drawing", "pcb", "firmware", "analysis"
 
 
 class Member(Base):
-    """A person on the team. Deliberately thin -- this is an assignee list, not an
-    auth system (see docs/ARCHITECTURE.md for adding real login)."""
+    """A person on the team: both the assignee list and the login account.
+
+    One table for both on purpose. The alternative -- a separate users table --
+    means every graduating senior has to be removed from two places, and the
+    two lists drift. Here, deactivating someone removes their access and keeps
+    their name on the parts they designed.
+
+    A member with no password_hash simply cannot log in, which is exactly what
+    you want for people you want to assign work to but who never sign in.
+    """
 
     __tablename__ = "members"
 
@@ -84,7 +92,51 @@ class Member(Base):
     subteam: Mapped[str | None] = mapped_column(String(80))  # Suspension, Drivetrain, Electrical
     role: Mapped[str | None] = mapped_column(String(80))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    # --- login ---------------------------------------------------------------
+    # Format: scrypt$n$r$p$salt_hex$key_hex -- the parameters travel with the
+    # hash so they can be raised later without invalidating existing passwords.
+    password_hash: Mapped[str | None] = mapped_column(String(255))
+    # Admins manage the roster. Everyone else just uses the app.
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    sessions: Mapped[list["Session"]] = relationship(
+        back_populates="member", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+    @property
+    def has_password(self) -> bool:
+        """Whether this person can sign in. The hash itself never leaves here."""
+        return bool(self.password_hash)
+
+
+class Session(Base):
+    """A logged-in browser.
+
+    Sessions live in the database rather than in a signed cookie so they can be
+    revoked: logging out, or deactivating a member, ends access immediately
+    instead of waiting for a token to expire.
+
+    Only the SHA-256 of the token is stored. The raw token exists in the user's
+    cookie and nowhere else, so a leaked database does not hand over live
+    sessions.
+    """
+
+    __tablename__ = "sessions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    user_agent: Mapped[str | None] = mapped_column(String(300))
+
+    member: Mapped["Member"] = relationship(back_populates="sessions")
 
 
 class Project(Base):

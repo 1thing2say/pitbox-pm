@@ -37,6 +37,24 @@ class MemberIn(BaseModel):
 class MemberOut(MemberIn):
     model_config = ORM
     id: int
+    is_admin: bool = False
+    # password_hash is deliberately absent — this model is what the API returns.
+    has_password: bool = False
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=200)
+    password: str = Field(min_length=1, max_length=200)
+
+
+class PasswordSet(BaseModel):
+    """Admins set another member's password; members change their own."""
+    password: str = Field(min_length=8, max_length=200)
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=8, max_length=200)
 
 
 # --- tags --------------------------------------------------------------------

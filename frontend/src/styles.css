@@ -123,6 +123,26 @@ a {
   font-style: normal;
   color: var(--text);
 }
+.whoami {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  padding-left: 6px;
+}
+.admin-pip {
+  font-family: var(--font-head);
+  font-size: 0.6rem;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+
 .topbar-actions {
   margin-left: auto;
   display: flex;

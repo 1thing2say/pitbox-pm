@@ -17,14 +17,44 @@ import pytest
 _TMP = Path(tempfile.mkdtemp(prefix="pitbox-test-"))
 os.environ["PITBOX_DATABASE_URL"] = f"sqlite:///{(_TMP / 'test.db').as_posix()}"
 os.environ["PITBOX_STORAGE_DIR"] = str(_TMP / "storage")
+# The bulk of the suite drives the built-in login, so pin that mode. The
+# Cloudflare and open modes get their own tests below, which flip it back.
+os.environ["PITBOX_AUTH_MODE"] = "password"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
 from app.main import app  # noqa: E402
 
 
+ADMIN_EMAIL = "test-admin@example.edu"
+ADMIN_PASSWORD = "test-password-123"
+
+
 @pytest.fixture(scope="module")
 def client():
+    """A signed-in admin. Every route below /api except auth and health now
+    requires a session, so the fixture logs in and TestClient keeps the cookie."""
+    with TestClient(app) as c:
+        from app.database import SessionLocal
+        from app.models import Member
+        from app.security import hash_password
+
+        with SessionLocal() as db:
+            if db.query(Member).filter(Member.email == ADMIN_EMAIL).first() is None:
+                db.add(Member(
+                    name="Test Admin", email=ADMIN_EMAIL,
+                    password_hash=hash_password(ADMIN_PASSWORD), is_admin=True,
+                ))
+                db.commit()
+
+        r = c.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+        assert r.status_code == 200, r.text
+        yield c
+
+
+@pytest.fixture()
+def anon():
+    """A client with no session, for checking that things are actually locked."""
     with TestClient(app) as c:
         yield c
 
@@ -475,3 +505,234 @@ def test_client_side_routes_are_served_by_the_server(client):
     for path in ("/", "/app", "/login", "/signup"):
         r = client.get(path)
         assert r.status_code == 200, path
+# --- authentication ----------------------------------------------------------
+
+def test_every_api_route_requires_a_session(anon, project):
+    """The guard is applied at router include time, so a new endpoint is
+    protected by default. This checks the actual surface, not one sample."""
+    protected = [
+        ("get", "/api/projects"),
+        ("get", f"/api/projects/{project['id']}/tree"),
+        ("get", f"/api/projects/{project['id']}/export.csv"),
+        ("post", "/api/projects"),
+        ("post", "/api/projects/clone"),
+        ("get", "/api/nodes/1"),
+        ("post", "/api/nodes"),
+        ("patch", "/api/nodes/1"),
+        ("delete", "/api/nodes/1"),
+        ("get", "/api/tags"),
+        ("post", "/api/tags"),
+        ("get", "/api/members"),
+        ("post", "/api/members"),
+        ("get", "/api/attachments?node_id=1"),
+    ]
+    for method, url in protected:
+        if method in {"post", "patch", "put"}:
+            res = getattr(anon, method)(url, json={})
+        else:
+            res = getattr(anon, method)(url)
+        assert res.status_code == 401, f"{method.upper()} {url} returned {res.status_code}, not 401"
+
+
+def test_health_stays_public(anon):
+    # Uptime checks and `fly status` must work without credentials.
+    assert anon.get("/api/health").status_code == 200
+
+
+def test_root_redirects_to_login_when_signed_out(anon):
+    res = anon.get("/", follow_redirects=False)
+    assert res.status_code == 302
+    assert res.headers["location"] == "/login"
+
+
+def test_login_page_renders(anon):
+    res = anon.get("/login")
+    assert res.status_code == 200
+    assert "Sign in" in res.text
+
+
+def test_login_rejects_wrong_password(anon):
+    res = anon.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": "not-it"})
+    assert res.status_code == 401
+    # Same message whichever half is wrong, so the form cannot enumerate accounts.
+    assert res.json()["detail"] == "Wrong email or password."
+
+
+def test_login_rejects_unknown_email_identically(anon):
+    res = anon.post("/api/auth/login", json={"email": "nobody@example.edu", "password": "x"})
+    assert res.status_code == 401
+    assert res.json()["detail"] == "Wrong email or password."
+
+
+def test_login_sets_a_httponly_cookie(anon):
+    res = anon.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    assert res.status_code == 200
+    cookie = res.headers["set-cookie"].lower()
+    assert "pitbox_session=" in cookie
+    assert "httponly" in cookie          # XSS cannot read it
+    assert "samesite=lax" in cookie      # cross-site writes are blocked
+    assert anon.get("/api/auth/me").json()["email"] == ADMIN_EMAIL
+
+
+def test_me_never_leaks_the_hash(client):
+    body = client.get("/api/auth/me").json()
+    assert "password_hash" not in body
+    assert body["has_password"] is True
+    assert body["is_admin"] is True
+
+
+def test_logout_invalidates_the_session_server_side(anon):
+    anon.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    assert anon.get("/api/projects").status_code == 200
+    assert anon.post("/api/auth/logout").status_code == 204
+    assert anon.get("/api/projects").status_code == 401
+
+
+def test_stolen_cookie_is_useless_after_logout(anon):
+    """Sessions are server-side, so a copied cookie dies with the session
+    rather than staying valid until it expires."""
+    anon.post("/api/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
+    stolen = anon.cookies["pitbox_session"]
+    anon.post("/api/auth/logout")
+
+    with TestClient(app) as thief:
+        thief.cookies.set("pitbox_session", stolen)
+        assert thief.get("/api/projects").status_code == 401
+
+
+def test_password_hashing_is_salted_and_verifiable():
+    from app.security import hash_password, verify_password
+    a, b = hash_password("same-password"), hash_password("same-password")
+    assert a != b                       # distinct salts
+    assert a.startswith("scrypt$")      # parameters travel with the hash
+    assert verify_password("same-password", a)
+    assert not verify_password("same-password", b.replace("scrypt", "bogus"))
+    assert not verify_password("wrong", a)
+    assert not verify_password("anything", None)   # no password set = cannot log in
+
+
+def test_deactivated_member_loses_access_immediately(client, anon):
+    made = client.post("/api/members", json={
+        "name": "Temp Member", "email": "temp@example.edu", "is_active": True,
+    }).json()
+    assert client.put(f"/api/members/{made['id']}/password",
+                      json={"password": "temp-password-1"}).status_code == 204
+
+    anon.post("/api/auth/login", json={"email": "temp@example.edu", "password": "temp-password-1"})
+    assert anon.get("/api/projects").status_code == 200
+
+    client.delete(f"/api/members/{made['id']}")          # deactivate
+    assert anon.get("/api/projects").status_code == 401  # next request, not next login
+
+
+def test_non_admin_cannot_manage_the_roster(client, anon):
+    made = client.post("/api/members", json={
+        "name": "Plain Member", "email": "plain@example.edu", "is_active": True,
+    }).json()
+    client.put(f"/api/members/{made['id']}/password", json={"password": "plain-password-1"})
+    anon.post("/api/auth/login", json={"email": "plain@example.edu", "password": "plain-password-1"})
+
+    assert anon.get("/api/members").status_code == 200          # reading is fine
+    assert anon.post("/api/members", json={"name": "Sneaky"}).status_code == 403
+    assert anon.put(f"/api/members/{made['id']}/password",
+                    json={"password": "hijacked-123"}).status_code == 403
+    assert anon.delete(f"/api/members/{made['id']}").status_code == 403
+
+
+def test_changing_password_requires_the_current_one(client):
+    res = client.post("/api/auth/password",
+                      json={"current_password": "wrong", "new_password": "brand-new-pass"})
+    assert res.status_code == 401
+
+
+def test_cannot_deactivate_the_last_admin(client):
+    me = client.get("/api/auth/me").json()
+    res = client.delete(f"/api/members/{me['id']}")
+    assert res.status_code == 400
+
+
+# --- auth modes ---------------------------------------------------------------
+# The default deployment is Cloudflare Access: no accounts, no passwords, the
+# identity arrives in a header that only the tunnel can set.
+
+import contextlib  # noqa: E402
+
+from app.config import settings  # noqa: E402
+
+ACCESS_HEADER = "Cf-Access-Authenticated-User-Email"
+
+
+@contextlib.contextmanager
+def auth_mode(mode: str):
+    """Flip the mode for one test. settings is read live, so this is enough."""
+    previous = settings.auth_mode
+    settings.auth_mode = mode  # type: ignore[assignment]
+    try:
+        yield
+    finally:
+        settings.auth_mode = previous  # type: ignore[assignment]
+
+
+def test_cloudflare_mode_accepts_the_access_header(anon):
+    with auth_mode("cloudflare"):
+        res = anon.get("/api/auth/me", headers={ACCESS_HEADER: "Newbie@School.EDU"})
+        assert res.status_code == 200
+        body = res.json()
+        # Created on first sight — nobody had to make them an account.
+        assert body["email"] == "newbie@school.edu"
+        assert body["name"] == "Newbie"
+        assert anon.get("/api/projects", headers={ACCESS_HEADER: "newbie@school.edu"}).status_code == 200
+
+
+def test_cloudflare_mode_reuses_the_same_member_on_return_visits(anon):
+    with auth_mode("cloudflare"):
+        first = anon.get("/api/auth/me", headers={ACCESS_HEADER: "repeat@school.edu"}).json()
+        second = anon.get("/api/auth/me", headers={ACCESS_HEADER: "REPEAT@school.edu"}).json()
+        assert first["id"] == second["id"], "email match must be case-insensitive"
+
+
+def test_cloudflare_mode_links_to_an_existing_roster_member(client, anon):
+    """Someone already in the roster as an assignee keeps their record — they
+    do not get a duplicate the first time they sign in."""
+    existing = client.post("/api/members", json={
+        "name": "Already Here", "email": "already@school.edu", "subteam": "Brakes",
+    }).json()
+    with auth_mode("cloudflare"):
+        seen = anon.get("/api/auth/me", headers={ACCESS_HEADER: "already@school.edu"}).json()
+    assert seen["id"] == existing["id"]
+    assert seen["name"] == "Already Here"     # not overwritten
+    assert seen["subteam"] == "Brakes"
+
+
+def test_cloudflare_mode_refuses_a_request_with_no_access_header(anon):
+    """No header means the tunnel was bypassed or no policy is attached.
+    Fail closed, and say which."""
+    with auth_mode("cloudflare"):
+        res = anon.get("/api/projects")
+        assert res.status_code == 403
+        assert "Cloudflare Access" in res.json()["detail"]
+
+
+def test_built_in_login_is_disabled_outside_password_mode(anon):
+    with auth_mode("cloudflare"):
+        assert anon.get("/login").status_code == 404
+        assert anon.post("/api/auth/login",
+                         json={"email": "a@b.c", "password": "x"}).status_code == 404
+
+
+def test_health_reports_the_mode(anon):
+    with auth_mode("cloudflare"):
+        assert anon.get("/api/health").json()["auth_mode"] == "cloudflare"
+
+
+def test_none_mode_is_open_and_needs_no_header(anon):
+    with auth_mode("none"):
+        assert anon.get("/api/projects").status_code == 200
+        assert anon.get("/api/auth/me").json()["email"] == "local@localhost"
+
+
+def test_password_mode_ignores_the_access_header(anon):
+    """A forged header must not grant anything when the app is not behind
+    Cloudflare — otherwise switching modes would open a hole."""
+    res = anon.get("/api/projects", headers={ACCESS_HEADER: "attacker@evil.com"})
+    assert res.status_code == 401

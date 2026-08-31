@@ -1,0 +1,14 @@
+# Cloudflared tunnel config for Pit Box.
+#
+# Copy to  %USERPROFILE%\.cloudflared\config.yml  and edit the three marked
+# values. Full walkthrough in docs/CLOUDFLARE.md.
+
+tunnel: pitbox                                    # <-- your tunnel name
+credentials-file: C:\Users\YOU\.cloudflared\TUNNEL-ID.json   # <-- printed by `cloudflared tunnel create`
+
+ingress:
+  - hostname: pitbox.yourteam.org                 # <-- your hostname
+    service: http://127.0.0.1:8000
+
+  # Anything not matching above gets refused rather than forwarded.
+  - service: http_status:404
