@@ -218,46 +218,60 @@
 .hero-mark {
   position: relative;
   z-index: 3;
-  margin: 0;
-  padding: 0 24px;
+  /* Cancels the padding below, so the halo's breathing room costs no layout
+     space and the letters land exactly where they did before it was added. */
+  margin: -0.4em 0;
+  /* Font-size lives here rather than on the inner element for two reasons: the
+     wipe below is expressed in em, so it tracks the letters at every viewport
+     width instead of drifting as the clamp changes; and the vertical padding
+     gives the glow halo room to live INSIDE the masked box. A mask clips what
+     it does not cover, so without that room the halo is sliced off square and
+     the text sits in a visible bright rectangle. */
+  font-size: clamp(3.4rem, 19vw, 16rem);
+  padding: 0.4em 24px;
   /* Wiped out from the bottom rather than blurred: a mask edge travels up
      through the glyphs, so the letters stay perfectly sharp and simply stop
-     existing from the baseline up. --wipe starts below the text (-25%) so
-     nothing is hidden at rest, and clears the top (110%) by the end. */
-  --wipe: calc((var(--cardp) - 0.62) / 0.38 * 128% - 14%);
+     existing from the baseline up. The text spans 0.4em to 1.32em of the box,
+     so the edge starts just under it (0.05em, nothing hidden at rest) and ends
+     just over the cap height (1.35em). */
+  --wipe: calc((var(--cardp) - 0.62) / 0.38 * 1.3em + 0.05em);
   -webkit-mask-image: linear-gradient(
     to top,
     transparent var(--wipe),
-    #000 calc(var(--wipe) + 20%)
+    #000 calc(var(--wipe) + 0.34em)
   );
   mask-image: linear-gradient(
     to top,
     transparent var(--wipe),
-    #000 calc(var(--wipe) + 20%)
+    #000 calc(var(--wipe) + 0.34em)
   );
+  /* Masks repeat by default, which tiles the gradient above and below the box
+     and bands the halo. */
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
   will-change: mask-image;
 }
 
-/* Silver: a vertical gradient clipped to the glyphs. The entrance sweeps that
-   gradient sideways (background-position) while the text rises out of blur and
-   darkness, which is what reads as a light finding the letters. */
+/* Glow stick: a translucent amber gradient clipped to the glyphs, with a hot
+   near-white core two-fifths down and deeper orange falling off to a dark foot
+   — the same way the liquid in a cracked stick is brightest through its middle
+   and denser at the ends. The alpha is what makes it translucent: the Life
+   pattern and the stars stay faintly visible through the letters. */
 .hero-mark-in {
   display: block;
   font-family: var(--font-head);
   text-transform: uppercase;
-  font-size: clamp(3.4rem, 19vw, 16rem);
   line-height: 0.92;
   letter-spacing: clamp(2px, 1.2vw, 14px);
   white-space: nowrap;
-  /* White, with a short darker fall-off at the foot of the letters — enough to
-     seat them against the grid without reading as the old silver gradient. */
   background-image: linear-gradient(
     180deg,
-    #ffffff 0%,
-    #ffffff 58%,
-    #e6e9ee 74%,
-    #b3b9c3 88%,
-    #878d97 100%
+    rgba(255, 141, 33, 0.88) 0%,
+    rgba(255, 178, 92, 0.9) 22%,
+    rgba(255, 226, 178, 0.94) 42%,
+    rgba(255, 173, 74, 0.9) 60%,
+    rgba(249, 118, 16, 0.88) 78%,
+    rgba(166, 71, 8, 0.86) 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -268,19 +282,26 @@
    same ratio, so the big mark and the small one read as one identity. */
 .hm-thin { font-weight: 300; }
 .hm-bold { font-weight: 600; }
+/* The letters are never blurred — they are sharp from the first frame and the
+   entrance is an ignition instead: the glyphs come up dim and desaturated, then
+   brighten as the halo blooms out of nothing, the way a stick lights when it is
+   snapped. Both ends of the filter list the same functions in the same order,
+   which is what lets the browser interpolate it rather than snapping. */
 @keyframes mark-emerge {
   0% {
     opacity: 0;
-    filter: blur(34px) brightness(0.16);
     letter-spacing: clamp(14px, 4.5vw, 64px);
+    filter: brightness(0.2) saturate(0.5) drop-shadow(0 0 0 rgba(255, 138, 43, 0))
+      drop-shadow(0 0 0 rgba(255, 94, 0, 0));
   }
-  60% {
+  55% {
     opacity: 1;
   }
   100% {
     opacity: 1;
-    filter: blur(0) brightness(1) drop-shadow(0 18px 40px rgba(0, 0, 0, 0.55));
     letter-spacing: clamp(2px, 1.2vw, 14px);
+    filter: brightness(1) saturate(1) drop-shadow(0 0 26px rgba(255, 138, 43, 0.5))
+      drop-shadow(0 0 66px rgba(255, 94, 0, 0.32));
   }
 }
 
@@ -831,7 +852,14 @@
   .scene-dust circle { opacity: 0.35; }
   .scene-car-body { transform: translate(240px, 150px); }
   .reveal { opacity: 1; transform: none; transition: none; }
-  .hero-mark-in { animation: none; opacity: 1; }
+  /* No animation, but still lit — without the end-state filter the halo would
+     simply be absent for anyone who prefers reduced motion. */
+  .hero-mark-in {
+    animation: none;
+    opacity: 1;
+    filter: drop-shadow(0 0 26px rgba(255, 138, 43, 0.5))
+      drop-shadow(0 0 66px rgba(255, 94, 0, 0.32));
+  }
   .hero-cue svg { animation: none; }
   .hero-car { animation: none; }
   .hero-stars span { animation: none; opacity: 0.7; }
