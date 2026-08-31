@@ -38,6 +38,12 @@
   gap: 20px;
 }
 
+/* When the nav intro starts: just past INTRO_MS in HeroCar3D (2300ms), so the
+   header fills in as the car settles rather than while it is still turning. */
+:root {
+  --nav-in: 2.45s;
+}
+
 .site-brand {
   display: flex;
   align-items: center;
@@ -52,14 +58,41 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  transition: opacity 0.4s ease, transform 0.62s cubic-bezier(0.2, 0.85, 0.25, 1);
 }
-/* Hidden only while the giant hero wordmark is still on screen. Any page
-   without a hero never sets the attribute, so the brand is simply always
-   there -- the animation can never leave the header empty. */
-:root[data-hero='active'] .brand-inner {
-  opacity: 0;
-  transform: translateY(125%);
+
+/* Landing-page intro. The header opens holding nothing but Log in and Sign up;
+   once the car has driven in, the brand drops in from above and the links fade
+   up under it. Gated on [data-hero], which only the landing page sets — any
+   other page shows a complete header immediately, so this can never leave the
+   nav empty. `both` is what keeps them hidden through the delay. */
+:root[data-hero] .brand-inner {
+  animation: brand-drop 0.72s cubic-bezier(0.2, 0.85, 0.25, 1) var(--nav-in) both;
+}
+:root[data-hero] .site-links a:not(.btn),
+:root[data-hero] .nav-sep {
+  animation: nav-link-in 0.55s ease calc(var(--nav-in) + 0.15s) both;
+}
+@keyframes brand-drop {
+  from {
+    opacity: 0;
+    /* Above the header, clipped by .site-brand's overflow, so it arrives
+       through the top edge rather than sliding over the page. */
+    transform: translateY(-125%);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes nav-link-in {
+  from {
+    opacity: 0;
+    transform: translateY(-7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .wordmark-mark {
   width: 26px;
@@ -69,7 +102,9 @@
   font-family: var(--font-head);
   font-size: 1.15rem;
   letter-spacing: 1.5px;
-  color: var(--text);
+  /* Plain white. --text is #f2f3f5, which reads faintly silver next to the
+     orange half of the mark. */
+  color: #fff;
   font-weight: 300;
 }
 .wordmark-text b {
@@ -148,7 +183,7 @@
      the wordmark can read it too. */
   --cardp: clamp(0, calc((var(--p) - 0.28) / 0.5), 1);
   /* Grid pitch, shared by both backdrop layers. */
-  --cell: 26px;
+  --cell: 64px;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -191,34 +226,37 @@
   background-image:
     repeating-linear-gradient(
       to right,
-      rgba(255, 255, 255, 0.15) 0 1px,
-      transparent 1px var(--cell)
+      rgba(255, 255, 255, 0.15) 0 2px,
+      transparent 2px var(--cell)
     ),
     repeating-linear-gradient(
       to bottom,
-      rgba(255, 255, 255, 0.15) 0 1px,
-      transparent 1px var(--cell)
+      rgba(255, 255, 255, 0.15) 0 2px,
+      transparent 2px var(--cell)
     );
 }
 .grid-b {
   background-image:
     repeating-linear-gradient(
       to right,
-      rgba(255, 255, 255, 0.1) 0 1px,
-      transparent 1px var(--cell)
+      rgba(255, 255, 255, 0.1) 0 2px,
+      transparent 2px var(--cell)
     ),
     repeating-linear-gradient(
       to bottom,
-      rgba(255, 255, 255, 0.1) 0 1px,
-      transparent 1px var(--cell)
+      rgba(255, 255, 255, 0.1) 0 2px,
+      transparent 2px var(--cell)
     );
   background-position: calc(var(--cell) / 2) calc(var(--cell) / 2);
-  animation: grid-drift 26s linear infinite;
+  animation: grid-drift 9s linear infinite;
 }
+/* Diagonal: one whole cell on BOTH axes, so the layer lands exactly where it
+   started and the loop is invisible. Any other pairing would drift out of
+   register and need a fade to cover the reset. */
 @keyframes grid-drift {
   to {
     background-position:
-      calc(var(--cell) / 2 + var(--cell)) calc(var(--cell) / 2);
+      calc(var(--cell) / 2 + var(--cell)) calc(var(--cell) / 2 + var(--cell));
   }
 }
 /* Reads inverted at first glance: the CENTRE is most transparent, so the grid
@@ -870,6 +908,11 @@
 @media (max-width: 760px) {
   .site { --shell: min(1140px, 100% - 32px); }
   .nav-burger { display: flex; }
+  /* The links live in the burger panel here, not the bar. Holding them back on
+     a timer would mean opening the menu in the first couple of seconds shows an
+     empty panel, so only the brand keeps its intro. */
+  :root[data-hero] .site-links a:not(.btn),
+  :root[data-hero] .nav-sep { animation: none; }
   .site-links {
     position: absolute;
     top: 68px;
@@ -916,6 +959,10 @@
       drop-shadow(0 0 66px rgba(255, 94, 0, 0.32));
   }
   .grid-b { animation: none; }
+  /* The header is simply complete from the start. */
+  :root[data-hero] .brand-inner,
+  :root[data-hero] .site-links a:not(.btn),
+  :root[data-hero] .nav-sep { animation: none; }
   .hero-cue svg { animation: none; }
   .hero-car { animation: none; }
   .hero-stars span { animation: none; opacity: 0.7; }

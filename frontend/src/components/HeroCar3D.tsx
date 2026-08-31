@@ -17,6 +17,14 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { HeroCarFrames } from './HeroCarFrames'
 
 const MODEL = '/models/buggy-hero.glb'
+/** Decimated twin. The parts are gpu-instanced, so a phone processes ~580k
+ *  vertices per pass at full detail even though only 81k are uploaded; this
+ *  build cuts that to ~259k. Chosen by viewport and pointer type, which is the
+ *  honest signal for "phone" — deviceMemory is unavailable on iOS. */
+const MODEL_LIGHT = '/models/buggy-mobile.glb'
+const LIGHT_QUERY = '(max-width: 900px), (pointer: coarse)'
+const wantsLight = () =>
+  typeof window !== 'undefined' && window.matchMedia(LIGHT_QUERY).matches
 /** Rotation (radians) at which the car faces the camera. */
 const FRONT = 0
 const QUARTER = Math.PI / 2
@@ -99,7 +107,10 @@ function Buggy({
   progress: RefObject<number>
   phase: RefObject<Phase>
 }) {
-  const { scene } = useGLTF(MODEL, '/draco/gltf/')
+  // Decided once per mount: swapping the URL mid-life would re-suspend and
+  // restart the intro.
+  const [url] = useState(() => (wantsLight() ? MODEL_LIGHT : MODEL))
+  const { scene } = useGLTF(url, '/draco/gltf/')
   const group = useRef<Group>(null)
 
   // Timestamp of the moment the spin finished; null until it does.
@@ -263,7 +274,7 @@ export function HeroCar3D({
     <div className="hero-car" ref={wrap} aria-hidden="true">
       <Canvas
         frameloop={visible ? 'always' : 'never'}
-        dpr={[1, 2]}
+        dpr={[1, wantsLight() ? 1.5 : 2]}
         camera={{ position: [0, 1.05, 6.4], fov: 32 }}
         gl={{ antialias: true, alpha: true }}
         onCreated={({ gl }) => {
@@ -279,4 +290,4 @@ export function HeroCar3D({
   )
 }
 
-useGLTF.preload(MODEL, '/draco/gltf/')
+useGLTF.preload(wantsLight() ? MODEL_LIGHT : MODEL, '/draco/gltf/')

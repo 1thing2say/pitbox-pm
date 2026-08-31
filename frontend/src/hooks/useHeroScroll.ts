@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 
 /**
  * Drives a pinned hero. `.hero` is tall; `.hero-stage` sticks to the viewport
@@ -38,7 +38,7 @@ export function useHeroScroll() {
     [listeners],
   )
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const section = sectionRef.current
     const stage = stageRef.current
     if (!section || !stage) return
