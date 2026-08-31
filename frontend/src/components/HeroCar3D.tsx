@@ -38,8 +38,11 @@ const INTRO_TURNS = 1.5
  *  densest around the silhouette and the roll cage. */
 const BODY_COLOR = '#ff8a2b'
 const GLOW_COLOR = '#ff5a00'
-const BODY_OPACITY = 0.42
-const GLOW_MAX = 1.15
+/** Never fully transparent: the dark glass silhouette is there from the start,
+ *  so the unveil is the emission coming up, not the body fading in. */
+const OPACITY_DARK = 0.12
+const OPACITY_LIT = 0.42
+const GLOW_MAX = 1.0
 /** Unveil: lights come up from below and the scene brightens. */
 const UNVEIL_MS = 2600
 const UNVEIL_DELAY = 250
@@ -111,7 +114,7 @@ function Buggy({
         metalness: 0,
         roughness: 0.28,
         transparent: true,
-        opacity: 0,
+        opacity: OPACITY_DARK,
         depthWrite: false,
         side: DoubleSide,
       }),
@@ -140,7 +143,7 @@ function Buggy({
     // The unveil now runs through the body itself: it fades up out of nothing
     // and the emission climbs, so it lights from within as well as from below.
     const u = easeOut(phase.current.unveilT)
-    material.opacity = u * BODY_OPACITY
+    material.opacity = lerp(OPACITY_DARK, OPACITY_LIT, u)
     material.emissiveIntensity = u * GLOW_MAX
 
     const p = clamp01(progress.current ?? 0)
@@ -192,14 +195,14 @@ function UnveilRig({ phase }: { phase: RefObject<Phase> }) {
       // Brightest mid-sweep, then hands off to the key light.
       sweep.current.intensity = 9 * Math.sin(Math.PI * clamp01(t)) + 1
     }
-    if (key.current) key.current.intensity = lerp(0, 13, clamp01((t - 0.25) / 0.75))
+    if (key.current) key.current.intensity = lerp(0, 9, clamp01((t - 0.25) / 0.75))
     if (rim.current) rim.current.intensity = lerp(0, 7, clamp01((t - 0.4) / 0.6))
   })
 
   return (
     <>
       <pointLight ref={sweep} position={[0, -1.6, 2.6]} color="#ffb070" distance={14} decay={1.4} />
-      <pointLight ref={key} position={[3.4, 4.2, 4.5]} color="#fff3e6" distance={26} decay={1.5} />
+      <pointLight ref={key} position={[3.4, 4.2, 4.5]} color="#ffd9a8" distance={26} decay={1.5} />
       <pointLight ref={rim} position={[-4.2, 2.2, -3.6]} color="#ff8a3d" distance={22} decay={1.5} />
     </>
   )
