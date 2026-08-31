@@ -1,7 +1,15 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF } from '@react-three/drei'
 import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import { Box3, Group, PMREMGenerator, Vector3 } from 'three'
+import {
+  Box3,
+  Group,
+  Mesh,
+  MeshStandardMaterial,
+  PMREMGenerator,
+  Vector3,
+  type Object3D,
+} from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
 const MODEL = '/models/helmet.glb'
@@ -15,6 +23,10 @@ const IN_MS = 620
 /** Per-frame approach rate. Damped rather than snapped, so a fast mouse does
  *  not throw it around. */
 const EASE = 6
+
+/** The visor keeps its own material — a tinted BLEND surface at roughness 0,
+ *  which is what gives it the reflection. Everything else is repainted. */
+const VISOR_MATERIAL = 'Material.001'
 
 const clamp01 = (n: number) => Math.min(Math.max(n, 0), 1)
 /** Back-out: overshoots past 1 and settles, which is what reads as a pop. */
@@ -60,6 +72,27 @@ function Helmet({ onReady, pointer }: { onReady: () => void; pointer: RefObject<
   const { scene } = useGLTF(MODEL, '/draco/gltf/')
   const group = useRef<Group>(null)
   const start = useRef(0)
+
+  const silver = useMemo(
+    () =>
+      new MeshStandardMaterial({
+        color: '#cdd3db',
+        metalness: 0.92,
+        roughness: 0.24,
+      }),
+    [],
+  )
+
+  useEffect(() => {
+    scene.traverse((o: Object3D) => {
+      const m = o as Mesh
+      if (!m.isMesh) return
+      const current = Array.isArray(m.material) ? m.material[0] : m.material
+      if (current?.name === VISOR_MATERIAL) return
+      m.material = silver
+    })
+    return () => silver.dispose()
+  }, [scene, silver])
 
   // The model is barely 5cm across in its own units and sits off-origin, so it
   // is centred and normalised to a fixed on-screen size rather than trusted to
