@@ -17,7 +17,7 @@ import {
   SubsystemCards,
   TeamQuote,
 } from '../components/LandingSections'
-import { LifeField } from '../components/LifeField'
+// import { LifeField } from '../components/LifeField'
 import { Starfield } from '../components/Starfield'
 import { SiteFooter } from '../components/SiteFooter'
 import { SiteNav } from '../components/SiteNav'
@@ -206,7 +206,11 @@ export function Landing() {
               style={{ contain: 'layout style paint' }}
               aria-hidden="true"
             >
-              <LifeField className="hero-life" />
+              {/* <LifeField className="hero-life" /> */}
+              <div className="hero-grids">
+                <span className="grid-a" />
+                <span className="grid-b" />
+              </div>
               <div className="hero-mask" />
               <Starfield />
               <div className="hero-bottom" />
@@ -224,8 +228,9 @@ export function Landing() {
 
             <div className="hero-card">
               <ShotSlot
+                src="/shots/tracker.webp"
                 label="The tracker"
-                hint="Drop a screenshot at /public/shots/ and pass src"
+                alt="The Pit Box tracker: the Baja 2026 Car part tree with Front Upright, LH selected, showing its part number, status, assignee, material, mass and unit cost alongside the breakdown by material."
               />
             </div>
 

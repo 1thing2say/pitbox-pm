@@ -147,6 +147,8 @@
   /* How far the card has risen, 0..1. Lives here rather than on .hero-card so
      the wordmark can read it too. */
   --cardp: clamp(0, calc((var(--p) - 0.28) / 0.5), 1);
+  /* Grid pitch, shared by both backdrop layers. */
+  --cell: 26px;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -170,6 +172,55 @@
   position: absolute;
   inset: 0;
 }
+/* Two grids of the same pitch, the upper one offset by half a cell so its
+   lines fall between the lower one's. Sliding it sideways by exactly one cell
+   walks those lines through the static set and loops seamlessly — at the end
+   of the keyframe the pattern is identical to the start, so there is no jump
+   to hide. Background-position rather than transform: the gradient is infinite,
+   so nothing has to be oversized to avoid an edge appearing. */
+.hero-grids {
+  position: absolute;
+  inset: 0;
+}
+.hero-grids span {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.grid-a {
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.15) 0 1px,
+      transparent 1px var(--cell)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.15) 0 1px,
+      transparent 1px var(--cell)
+    );
+}
+.grid-b {
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0.1) 0 1px,
+      transparent 1px var(--cell)
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.1) 0 1px,
+      transparent 1px var(--cell)
+    );
+  background-position: calc(var(--cell) / 2) calc(var(--cell) / 2);
+  animation: grid-drift 26s linear infinite;
+}
+@keyframes grid-drift {
+  to {
+    background-position:
+      calc(var(--cell) / 2 + var(--cell)) calc(var(--cell) / 2);
+  }
+}
 /* Reads inverted at first glance: the CENTRE is most transparent, so the grid
    shows through behind the wordmark and is progressively covered by the page
    colour toward the edges. That is what stops it looking like a tiled image. */
@@ -179,9 +230,9 @@
   z-index: 1;
   background: radial-gradient(
     ellipse at 50% 46%,
-    color-mix(in srgb, var(--bg) 30%, transparent) 0%,
-    color-mix(in srgb, var(--bg) 58%, transparent) 45%,
-    color-mix(in srgb, var(--bg) 94%, transparent) 100%
+    color-mix(in srgb, var(--bg) 10%, transparent) 0%,
+    color-mix(in srgb, var(--bg) 40%, transparent) 45%,
+    color-mix(in srgb, var(--bg) 88%, transparent) 100%
   );
 }
 .hero-stars {
@@ -311,6 +362,10 @@
   display: block;
   width: 100%;
   height: 100%;
+  /* Halo off the canvas's own alpha, so it takes the shape of the car rather
+     than sitting behind it as a blob — the same bleed the wordmark has. One
+     shadow, not two: this recomputes on every animated frame. */
+  filter: drop-shadow(0 0 30px rgba(255, 96, 0, 0.45));
 }
 .hero-car {
   position: absolute;
@@ -860,6 +915,7 @@
     filter: drop-shadow(0 0 26px rgba(255, 138, 43, 0.5))
       drop-shadow(0 0 66px rgba(255, 94, 0, 0.32));
   }
+  .grid-b { animation: none; }
   .hero-cue svg { animation: none; }
   .hero-car { animation: none; }
   .hero-stars span { animation: none; opacity: 0.7; }

@@ -36,13 +36,13 @@ const INTRO_TURNS = 1.5
 /** Translucent amber body. depthWrite is off so overlapping shells accumulate
  *  instead of occluding each other — that build-up is what reads as glass/glow,
  *  densest around the silhouette and the roll cage. */
-const BODY_COLOR = '#ff8a2b'
-const GLOW_COLOR = '#ff5a00'
+const BODY_COLOR = '#ff7413'
+const GLOW_COLOR = '#ff4200'
 /** Never fully transparent: the dark glass silhouette is there from the start,
  *  so the unveil is the emission coming up, not the body fading in. */
 const OPACITY_DARK = 0.12
-const OPACITY_LIT = 0.42
-const GLOW_MAX = 1.0
+const OPACITY_LIT = 0.38
+const GLOW_MAX = 1.9
 /** Unveil: lights come up from below and the scene brightens. */
 const UNVEIL_MS = 2600
 const UNVEIL_DELAY = 250
@@ -85,7 +85,7 @@ function StudioEnvironment({ phase }: { phase: RefObject<Phase> }) {
   // The environment is what makes the metal read as metal, so it has to come up
   // with the unveil too — otherwise the "unlit" car still has bright reflections.
   useFrame(() => {
-    scene.environmentIntensity = lerp(0.02, 0.55, easeOut(phase.current.unveilT))
+    scene.environmentIntensity = lerp(0.02, 0.16, easeOut(phase.current.unveilT))
   })
   return null
 }
@@ -112,7 +112,7 @@ function Buggy({
         emissive: GLOW_COLOR,
         emissiveIntensity: 0,
         metalness: 0,
-        roughness: 0.28,
+        roughness: 0.46,
         transparent: true,
         opacity: OPACITY_DARK,
         depthWrite: false,
@@ -195,14 +195,14 @@ function UnveilRig({ phase }: { phase: RefObject<Phase> }) {
       // Brightest mid-sweep, then hands off to the key light.
       sweep.current.intensity = 9 * Math.sin(Math.PI * clamp01(t)) + 1
     }
-    if (key.current) key.current.intensity = lerp(0, 9, clamp01((t - 0.25) / 0.75))
-    if (rim.current) rim.current.intensity = lerp(0, 7, clamp01((t - 0.4) / 0.6))
+    if (key.current) key.current.intensity = lerp(0, 4.5, clamp01((t - 0.25) / 0.75))
+    if (rim.current) rim.current.intensity = lerp(0, 5, clamp01((t - 0.4) / 0.6))
   })
 
   return (
     <>
-      <pointLight ref={sweep} position={[0, -1.6, 2.6]} color="#ffb070" distance={14} decay={1.4} />
-      <pointLight ref={key} position={[3.4, 4.2, 4.5]} color="#ffd9a8" distance={26} decay={1.5} />
+      <pointLight ref={sweep} position={[0, -1.6, 2.6]} color="#ff9a40" distance={14} decay={1.4} />
+      <pointLight ref={key} position={[3.4, 4.2, 4.5]} color="#ffbe7a" distance={26} decay={1.5} />
       <pointLight ref={rim} position={[-4.2, 2.2, -3.6]} color="#ff8a3d" distance={22} decay={1.5} />
     </>
   )
