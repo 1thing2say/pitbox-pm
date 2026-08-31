@@ -38,12 +38,6 @@
   gap: 20px;
 }
 
-/* When the nav intro starts: just past INTRO_MS in HeroCar3D (2300ms), so the
-   header fills in as the car settles rather than while it is still turning. */
-:root {
-  --nav-in: 2.45s;
-}
-
 .site-brand {
   display: flex;
   align-items: center;
@@ -60,39 +54,37 @@
   gap: 9px;
 }
 
-/* Landing-page intro. The header opens holding nothing but Log in and Sign up;
-   once the car has driven in, the brand drops in from above and the links fade
-   up under it. Gated on [data-hero], which only the landing page sets — any
-   other page shows a complete header immediately, so this can never leave the
-   nav empty. `both` is what keeps them hidden through the delay. */
-:root[data-hero] .brand-inner {
-  animation: brand-drop 0.72s cubic-bezier(0.2, 0.85, 0.25, 1) var(--nav-in) both;
-}
+/* Landing-page intro. The header opens holding nothing but Log in and Sign up
+   and stays that way for the whole pinned hero; the brand and the links arrive
+   only once the car has driven off, which is a scroll position, not a timer.
+   Gated on [data-hero], which only the landing page sets — every other page
+   renders a complete header immediately, so this can never leave the nav empty.
+
+   Transitions rather than keyframes: the state can be scrubbed backwards by
+   scrolling up, and a keyframe would have to be restarted to do that. */
+:root[data-hero] .brand-inner,
 :root[data-hero] .site-links a:not(.btn),
 :root[data-hero] .nav-sep {
-  animation: nav-link-in 0.55s ease calc(var(--nav-in) + 0.15s) both;
+  transition:
+    opacity 0.45s ease,
+    transform 0.6s cubic-bezier(0.2, 0.85, 0.25, 1);
 }
-@keyframes brand-drop {
-  from {
-    opacity: 0;
-    /* Above the header, clipped by .site-brand's overflow, so it arrives
-       through the top edge rather than sliding over the page. */
-    transform: translateY(-125%);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+:root[data-hero='active'] .brand-inner {
+  opacity: 0;
+  /* Above the header, clipped by .site-brand's overflow, so it arrives through
+     the top edge rather than sliding over the page. */
+  transform: translateY(-125%);
 }
-@keyframes nav-link-in {
-  from {
-    opacity: 0;
-    transform: translateY(-7px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+:root[data-hero='active'] .site-links a:not(.btn),
+:root[data-hero='active'] .nav-sep {
+  opacity: 0;
+  transform: translateY(-7px);
+  pointer-events: none;
+}
+/* The links settle just behind the brand rather than with it. */
+:root[data-hero='passed'] .site-links a:not(.btn),
+:root[data-hero='passed'] .nav-sep {
+  transition-delay: 0.12s;
 }
 .wordmark-mark {
   width: 26px;
@@ -235,7 +227,7 @@
       transparent 2px var(--cell)
     );
 }
-.grid-b {
+.hero-grids .grid-b {
   background-image:
     repeating-linear-gradient(
       to right,
@@ -248,15 +240,22 @@
       transparent 2px var(--cell)
     );
   background-position: calc(var(--cell) / 2) calc(var(--cell) / 2);
+  /* Oversized by a cell on every side so translating never exposes an edge. */
+  inset: calc(var(--cell) * -1);
   animation: grid-drift 9s linear infinite;
+  will-change: transform;
 }
 /* Diagonal: one whole cell on BOTH axes, so the layer lands exactly where it
    started and the loop is invisible. Any other pairing would drift out of
-   register and need a fade to cover the reset. */
+   register and need a fade to cover the reset.
+
+   Moved with transform rather than background-position. Background-position is
+   not a compositor property: animating it repaints this full-viewport layer on
+   every single frame. A transform is handed to the compositor and costs
+   essentially nothing. */
 @keyframes grid-drift {
   to {
-    background-position:
-      calc(var(--cell) / 2 + var(--cell)) calc(var(--cell) / 2 + var(--cell));
+    transform: translate3d(var(--cell), var(--cell), 0);
   }
 }
 /* Reads inverted at first glance: the CENTRE is most transparent, so the grid
@@ -341,11 +340,9 @@
   will-change: mask-image;
 }
 
-/* Glow stick: a translucent amber gradient clipped to the glyphs, with a hot
-   near-white core two-fifths down and deeper orange falling off to a dark foot
-   — the same way the liquid in a cracked stick is brightest through its middle
-   and denser at the ends. The alpha is what makes it translucent: the Life
-   pattern and the stars stay faintly visible through the letters. */
+/* White, with a short darker fall-off at the foot so the letters seat against
+   the grid instead of floating on it. The halo stays warm — it is spill from
+   the car below, not a colour the type is painted in. */
 .hero-mark-in {
   display: block;
   font-family: var(--font-head);
@@ -355,12 +352,11 @@
   white-space: nowrap;
   background-image: linear-gradient(
     180deg,
-    rgba(255, 141, 33, 0.88) 0%,
-    rgba(255, 178, 92, 0.9) 22%,
-    rgba(255, 226, 178, 0.94) 42%,
-    rgba(255, 173, 74, 0.9) 60%,
-    rgba(249, 118, 16, 0.88) 78%,
-    rgba(166, 71, 8, 0.86) 100%
+    #ffffff 0%,
+    #ffffff 54%,
+    #eceef1 72%,
+    #c3c8d0 88%,
+    #8d939d 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -380,8 +376,7 @@
   0% {
     opacity: 0;
     letter-spacing: clamp(14px, 4.5vw, 64px);
-    filter: brightness(0.2) saturate(0.5) drop-shadow(0 0 0 rgba(255, 138, 43, 0))
-      drop-shadow(0 0 0 rgba(255, 94, 0, 0));
+    filter: brightness(0.2) saturate(0.5) drop-shadow(0 0 0 rgba(255, 214, 176, 0));
   }
   55% {
     opacity: 1;
@@ -389,8 +384,7 @@
   100% {
     opacity: 1;
     letter-spacing: clamp(2px, 1.2vw, 14px);
-    filter: brightness(1) saturate(1) drop-shadow(0 0 26px rgba(255, 138, 43, 0.5))
-      drop-shadow(0 0 66px rgba(255, 94, 0, 0.32));
+    filter: brightness(1) saturate(1) drop-shadow(0 0 24px rgba(255, 214, 176, 0.28));
   }
 }
 
@@ -400,15 +394,23 @@
   display: block;
   width: 100%;
   height: 100%;
-  /* Halo off the canvas's own alpha, so it takes the shape of the car rather
-     than sitting behind it as a blob — the same bleed the wordmark has. One
-     shadow, not two: this recomputes on every animated frame. */
-  filter: drop-shadow(0 0 30px rgba(255, 96, 0, 0.45));
+  /* No filter here. A drop-shadow on this element blurs the whole canvas
+     again on every rendered frame — a full-screen blur at 60fps, and the
+     single most expensive thing that was on this page. The glow below is
+     painted once instead. */
 }
 .hero-car {
   position: absolute;
   left: 0;
   right: 0;
+  /* Static bloom behind the car. It never changes, so it is rasterised once
+     and then just composited. */
+  background: radial-gradient(
+    ellipse 46% 38% at 50% 62%,
+    rgba(255, 106, 26, 0.2),
+    rgba(255, 106, 26, 0.07) 55%,
+    transparent 72%
+  );
   /* Lifted off the floor of the stage so the roll cage runs up behind the
      lettering — the car and the wordmark share vertical space rather than
      stacking. */
@@ -908,11 +910,15 @@
 @media (max-width: 760px) {
   .site { --shell: min(1140px, 100% - 32px); }
   .nav-burger { display: flex; }
-  /* The links live in the burger panel here, not the bar. Holding them back on
-     a timer would mean opening the menu in the first couple of seconds shows an
-     empty panel, so only the brand keeps its intro. */
-  :root[data-hero] .site-links a:not(.btn),
-  :root[data-hero] .nav-sep { animation: none; }
+  /* The links live in the burger panel here, not the bar, so gating them on
+     scroll would mean opening the menu over the hero shows an empty panel.
+     Only the brand keeps its entrance. */
+  :root[data-hero='active'] .site-links a:not(.btn),
+  :root[data-hero='active'] .nav-sep {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
   .site-links {
     position: absolute;
     top: 68px;
@@ -955,14 +961,14 @@
   .hero-mark-in {
     animation: none;
     opacity: 1;
-    filter: drop-shadow(0 0 26px rgba(255, 138, 43, 0.5))
-      drop-shadow(0 0 66px rgba(255, 94, 0, 0.32));
+    filter: drop-shadow(0 0 24px rgba(255, 214, 176, 0.28));
   }
-  .grid-b { animation: none; }
-  /* The header is simply complete from the start. */
+  .hero-grids .grid-b { animation: none; }
+  /* useHeroScroll parks data-hero at 'passed' under reduced motion, so the
+     header is complete from the start; kill the movement too. */
   :root[data-hero] .brand-inner,
   :root[data-hero] .site-links a:not(.btn),
-  :root[data-hero] .nav-sep { animation: none; }
+  :root[data-hero] .nav-sep { transition: none; }
   .hero-cue svg { animation: none; }
   .hero-car { animation: none; }
   .hero-stars span { animation: none; opacity: 0.7; }

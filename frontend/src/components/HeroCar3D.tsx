@@ -3,7 +3,6 @@ import { useGLTF } from '@react-three/drei'
 import { Suspense, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
   Box3,
-  DoubleSide,
   Group,
   Mesh,
   MeshStandardMaterial,
@@ -46,11 +45,12 @@ const INTRO_TURNS = 1.5
  *  densest around the silhouette and the roll cage. */
 const BODY_COLOR = '#ff7413'
 const GLOW_COLOR = '#ff4200'
-/** Never fully transparent: the dark glass silhouette is there from the start,
- *  so the unveil is the emission coming up, not the body fading in. */
-const OPACITY_DARK = 0.12
-const OPACITY_LIT = 0.38
-const GLOW_MAX = 1.9
+/** Opaque. The translucent version blended every triangle with depth-writing
+ *  off, so nothing could be depth-rejected and the whole 260k-vertex car was
+ *  drawn as overdraw — by far the most expensive thing on the page. Solid
+ *  geometry lets the depth buffer throw away everything hidden behind the
+ *  bodywork, and the glow comes from emission instead of accumulation. */
+const GLOW_MAX = 1.45
 /** Unveil: lights come up from below and the scene brightens. */
 const UNVEIL_MS = 2600
 const UNVEIL_DELAY = 250
@@ -124,10 +124,6 @@ function Buggy({
         emissiveIntensity: 0,
         metalness: 0,
         roughness: 0.46,
-        transparent: true,
-        opacity: OPACITY_DARK,
-        depthWrite: false,
-        side: DoubleSide,
       }),
     [],
   )
@@ -151,11 +147,9 @@ function Buggy({
     if (!g) return
     const introT = phase.current.introT
 
-    // The unveil now runs through the body itself: it fades up out of nothing
-    // and the emission climbs, so it lights from within as well as from below.
-    const u = easeOut(phase.current.unveilT)
-    material.opacity = lerp(OPACITY_DARK, OPACITY_LIT, u)
-    material.emissiveIntensity = u * GLOW_MAX
+    // The unveil is now entirely emission plus the light rig — the body is
+    // solid from the first frame and simply starts unlit.
+    material.emissiveIntensity = easeOut(phase.current.unveilT) * GLOW_MAX
 
     const p = clamp01(progress.current ?? 0)
     const introOffset = (easeOut(introT) - 1) * INTRO_TURNS * Math.PI * 2
@@ -206,7 +200,7 @@ function UnveilRig({ phase }: { phase: RefObject<Phase> }) {
       // Brightest mid-sweep, then hands off to the key light.
       sweep.current.intensity = 9 * Math.sin(Math.PI * clamp01(t)) + 1
     }
-    if (key.current) key.current.intensity = lerp(0, 4.5, clamp01((t - 0.25) / 0.75))
+    if (key.current) key.current.intensity = lerp(0, 7, clamp01((t - 0.25) / 0.75))
     if (rim.current) rim.current.intensity = lerp(0, 5, clamp01((t - 0.4) / 0.6))
   })
 
@@ -272,9 +266,11 @@ export function HeroCar3D({
 
   return (
     <div className="hero-car" ref={wrap} aria-hidden="true">
+      {/* dpr caps at 1.5, not 2: on a retina display dpr 2 is four times the
+          pixels of dpr 1, and this canvas redraws continuously. */}
       <Canvas
         frameloop={visible ? 'always' : 'never'}
-        dpr={[1, wantsLight() ? 1.5 : 2]}
+        dpr={[1, wantsLight() ? 1 : 1.5]}
         camera={{ position: [0, 1.05, 6.4], fov: 32 }}
         gl={{ antialias: true, alpha: true }}
         onCreated={({ gl }) => {
