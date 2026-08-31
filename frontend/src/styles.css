@@ -11,6 +11,8 @@
   --text-dim: #aab0bc;
   --text-muted: #767d8c;
   --accent: #ff6a1a;
+  /* Header height. The hero reads it to sit underneath the bar. */
+  --nav-h: 68px;
   --accent-2: #ffb547;
   --accent-soft: rgba(255, 106, 26, 0.12);
   --border: #2a2e37;

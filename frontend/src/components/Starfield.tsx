@@ -27,9 +27,9 @@ function field(count: number, size: number, seed: number, min: number, max: numb
   }).join(', ')
 }
 
-export function Starfield() {
+export function Starfield({ className = 'hero-stars' }: { className?: string }) {
   return (
-    <div className="hero-stars" aria-hidden="true">
+    <div className={className} aria-hidden="true">
       {LAYERS.map((l, i) => (
         <span
           key={i}

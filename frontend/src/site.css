@@ -29,10 +29,20 @@
   backdrop-filter: blur(10px);
   border-bottom-color: var(--border);
 }
+/* While the header is still filling in, it stays transparent so the hero
+   pattern runs up behind it. Scrolling the pinned hero sets .scrolled almost
+   immediately, which otherwise drops a solid dark band across the top of the
+   artwork with nothing in it but two buttons. The normal treatment resumes the
+   moment the nav is complete. */
+:root[data-hero='active'] .site-nav.scrolled {
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+}
 .site-nav-inner {
   width: var(--shell);
   margin: 0 auto;
-  height: 68px;
+  height: var(--nav-h);
   display: flex;
   align-items: center;
   gap: 20px;
@@ -54,17 +64,19 @@
   gap: 9px;
 }
 
-/* Landing-page intro. The header opens holding nothing but Log in and Sign up
-   and stays that way for the whole pinned hero; the brand and the links arrive
-   only once the car has driven off, which is a scroll position, not a timer.
-   Gated on [data-hero], which only the landing page sets — every other page
-   renders a complete header immediately, so this can never leave the nav empty.
+/* Landing-page intro. The header is empty for the whole pinned hero — not
+   just the brand and links, but Log in and Sign up too, because those live
+   under the car until the visitor scrolls past them. The bar takes over only
+   once the hero's own pair is gone. Gated on [data-hero], which only the
+   landing page sets, so every other page renders a complete header
+   immediately and this can never leave the nav empty.
 
    Transitions rather than keyframes: the state can be scrubbed backwards by
    scrolling up, and a keyframe would have to be restarted to do that. */
 :root[data-hero] .site-nav .brand-inner,
-:root[data-hero] .site-nav .site-links a:not(.btn),
-:root[data-hero] .site-nav .nav-sep {
+:root[data-hero] .site-nav .site-links a,
+:root[data-hero] .site-nav .nav-sep,
+:root[data-hero] .site-nav .nav-burger {
   transition:
     opacity 0.45s ease,
     transform 0.6s cubic-bezier(0.2, 0.85, 0.25, 1);
@@ -75,17 +87,48 @@
      the top edge rather than sliding over the page. */
   transform: translateY(-125%);
 }
-:root[data-hero='active'] .site-nav .site-links a:not(.btn),
-:root[data-hero='active'] .site-nav .nav-sep {
+:root[data-hero='active'] .site-nav .site-links a,
+:root[data-hero='active'] .site-nav .nav-sep,
+:root[data-hero='active'] .site-nav .nav-burger {
   opacity: 0;
   transform: translateY(-7px);
   pointer-events: none;
 }
 /* The links settle just behind the brand rather than with it. */
-:root[data-hero='passed'] .site-nav .site-links a:not(.btn),
+:root[data-hero='passed'] .site-nav .site-links a,
 :root[data-hero='passed'] .site-nav .nav-sep {
   transition-delay: 0.12s;
 }
+
+/* The header's actions while the hero owns the screen: under the car, fading
+   out on the same progress that brings the bar in, so the same two buttons are
+   never offered twice at once. The fade is on .hero-cta (scroll-driven) and
+   the entrance on its children, because an animation and a declared value
+   cannot share one property. */
+.hero-cta {
+  position: absolute;
+  bottom: 150px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: clamp(0, calc((0.5 - var(--p)) / 0.14), 1);
+}
+.hero-cta .btn {
+  font-size: 0.92rem;
+  text-decoration: none;
+  padding: 9px 18px;
+  animation: cue-in 0.5s ease var(--cue-in) both;
+}
+/* Not merely invisible once the nav has taken over — unreachable, so it can
+   never swallow a click aimed at the page behind it. */
+:root[data-hero='passed'] .hero-cta {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .wordmark-mark {
   width: 26px;
   height: 19px;
@@ -168,6 +211,13 @@
 .hero {
   position: relative;
   height: 200vh;
+  /* Pulled up under the header. Nav and stage are both sticky at top 0, so
+     once the hero is pinned the pattern already runs behind the bar — but at
+     rest the hero started below it, leaving a dead band across the top. The
+     stage adds the same amount back as padding, so the wordmark does not move;
+     this also removes the small upward shift it used to make over the first
+     68px of scroll. */
+  margin-top: calc(var(--nav-h) * -1);
 }
 .hero-stage {
   --p: 0;
@@ -187,7 +237,7 @@
   /* Mark sits high, not centred: the lower half of the stage is reserved for
      the car so the two never fight for the same space. */
   place-items: start center;
-  padding-top: clamp(72px, 15vh, 170px);
+  padding-top: calc(clamp(72px, 15vh, 170px) + var(--nav-h));
 }
 
 /* Backdrop: the live grid, a radial mask that keeps it strongest behind the
@@ -281,7 +331,36 @@
   z-index: 2;
   pointer-events: none;
 }
-.hero-stars span {
+/* The same field, sized and placed over the section glow further down the
+   page. It sits above the glow (z 0) and below the panel (z 1), and is masked
+   to the glow's own falloff so the points live in the orange rather than
+   floating out onto flat black. */
+.glow-stars {
+  position: absolute;
+  left: 50%;
+  top: -150px;
+  width: min(1120px, 112%);
+  height: 540px;
+  transform: translateX(-50%);
+  z-index: 1;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(
+    ellipse 46% 46% at 50% 52%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 42%,
+    transparent 72%
+  );
+  mask-image: radial-gradient(
+    ellipse 46% 46% at 50% 52%,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 42%,
+    transparent 72%
+  );
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+.hero-stars span,
+.glow-stars span {
   position: absolute;
   inset: 0;
   background-repeat: no-repeat;
@@ -353,13 +432,18 @@
   line-height: 0.92;
   letter-spacing: clamp(2px, 1.2vw, 14px);
   white-space: nowrap;
+  /* Bright through the top half, then falling a long way into near-black at
+     the feet — the drop is taller and goes much darker than a seating shadow
+     would, so the letters read as lit from above and dissolving downward. */
   background-image: linear-gradient(
     180deg,
     #ffffff 0%,
-    #ffffff 54%,
-    #eceef1 72%,
-    #c3c8d0 88%,
-    #8d939d 100%
+    #ffffff 36%,
+    #eef0f3 52%,
+    #b9bfc9 68%,
+    #737a86 82%,
+    #3a3f48 92%,
+    #1b1e24 100%
   );
   -webkit-background-clip: text;
   background-clip: text;
@@ -379,7 +463,8 @@
   0% {
     opacity: 0;
     letter-spacing: clamp(14px, 4.5vw, 64px);
-    filter: brightness(0.2) saturate(0.5) drop-shadow(0 0 0 rgba(255, 214, 176, 0));
+    filter: brightness(0.2) saturate(0.5) drop-shadow(0 0 0 rgba(255, 255, 255, 0))
+      drop-shadow(0 0 0 rgba(255, 198, 142, 0));
   }
   55% {
     opacity: 1;
@@ -387,7 +472,8 @@
   100% {
     opacity: 1;
     letter-spacing: clamp(2px, 1.2vw, 14px);
-    filter: brightness(1) saturate(1) drop-shadow(0 0 24px rgba(255, 214, 176, 0.28));
+    filter: brightness(1) saturate(1) drop-shadow(0 0 30px rgba(255, 255, 255, 0.45))
+      drop-shadow(0 0 78px rgba(255, 198, 142, 0.34));
   }
 }
 
@@ -481,10 +567,12 @@
    gone the moment it has been taken. */
 .hero-cue {
   position: absolute;
-  bottom: 30px;
+  /* Clear of .hero-bottom's 200px fade, which was washing it out, and above it
+     in the stack rather than level with it. */
+  bottom: 78px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 3;
+  z-index: 4;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -801,8 +889,29 @@
 /* ===== Footer ================================================= */
 .site-footer {
   margin-top: auto;
-  border-top: 1px solid var(--border);
-  background: var(--bg-soft);
+  /* The full-bleed accent line across the top, drawn as a background hairline
+     so it can carry a gradient, over a tint that bleeds down out of it and
+     dies about a third of the way in. Border-top is gone: a border cannot hold
+     a gradient without border-image, and this composites in one paint. */
+  border-top: 0;
+  background-image:
+    linear-gradient(
+      90deg,
+      var(--accent) 0%,
+      var(--accent) 42%,
+      rgba(255, 106, 26, 0.55) 66%,
+      rgba(255, 106, 26, 0.22) 100%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(255, 106, 26, 0.11) 0%,
+      rgba(255, 106, 26, 0.04) 34%,
+      transparent 62%
+    );
+  background-size: 100% 2px, 100% 380px;
+  background-repeat: no-repeat, no-repeat;
+  background-position: 0 0, 0 0;
+  background-color: var(--bg-soft);
   /* No top padding: .foot-news already carries it, and the two stacked left a
      dead band above the wordmark. */
   padding: 0 0 26px;
@@ -977,7 +1086,8 @@
   .hero-mark-in {
     animation: none;
     opacity: 1;
-    filter: drop-shadow(0 0 24px rgba(255, 214, 176, 0.28));
+    filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.45))
+      drop-shadow(0 0 78px rgba(255, 198, 142, 0.34));
   }
   .hero-grids .grid-b { animation: none; }
   /* useHeroScroll parks data-hero at 'passed' under reduced motion, so the
@@ -1515,21 +1625,12 @@ blockquote.q {
   gap: clamp(20px, 3vw, 48px);
   padding: clamp(34px, 5vw, 62px) 0;
   margin-top: clamp(30px, 5vw, 56px);
-  /* The rule is drawn as a background hairline rather than a border so it can
-     carry a gradient: accent at the left, under the wordmark and the kicker's
-     orange tick, settling into the ordinary border colour by mid-width. A flat
-     orange line straight across is louder than the footer wants. */
-  background-image: linear-gradient(
-    90deg,
-    var(--accent) 0%,
-    var(--accent) 26%,
-    rgba(255, 106, 26, 0.5) 44%,
-    var(--border) 68%,
-    var(--border) 100%
-  );
-  background-size: 100% 1px;
-  background-repeat: no-repeat;
-  background-position: 0 0;
+}
+/* Each column carries its own rule, so the gaps in the grid break the line
+   into segments rather than running one hairline edge to edge. */
+.foot-col {
+  border-top: 1px solid var(--border);
+  padding-top: 22px;
 }
 .foot-col h4 {
   font-size: 0.78rem;

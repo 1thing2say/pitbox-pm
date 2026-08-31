@@ -208,7 +208,6 @@ export function Landing() {
                 <span className="grid-b" />
               </div> */}
               <div className="hero-mask" />
-              <Starfield />
               <div className="hero-bottom" />
             </div>
 
@@ -228,6 +227,17 @@ export function Landing() {
                 label="The tracker"
                 alt="The Pit Box tracker: the Baja 2026 Car part tree with Front Upright, LH selected, showing its part number, status, assignee, material, mass and unit cost alongside the breakdown by material."
               />
+            </div>
+
+            {/* The header's actions live here first, under the car. The nav
+                only takes over once these have scrolled out of sight. */}
+            <div className="hero-cta">
+              <Link to="/login" className="btn btn-ghost">
+                Log in
+              </Link>
+              <Link to="/signup" className="btn btn-primary">
+                Sign up
+              </Link>
             </div>
 
             <div className="hero-cue" aria-hidden="true">
@@ -259,6 +269,7 @@ export function Landing() {
           sub="An intercollegiate competition run by SAE International, part of its Collegiate Design Series."
         >
           <div className="gh-stage">
+            <Starfield className="glow-stars" />
             <div className="bezel">
               <div className="bezel-split">
                 <div className="bezel-copy">
@@ -316,6 +327,7 @@ export function Landing() {
           sub="Every car in the series runs the same specified engine. Nobody can buy their way to more power."
         >
           <div className="gh-stage">
+            <Starfield className="glow-stars" />
             <div className="bezel bezel-pad">
               <p className="lead">
                 <b>If the powertrain is fixed, the car is won somewhere else.</b> Weight,
@@ -346,6 +358,7 @@ export function Landing() {
           sub="Static events are judged. Dynamic events are driven. Then everyone races at once."
         >
           <div className="gh-stage">
+            <Starfield className="glow-stars" />
             <div className="bezel bezel-pad">
               <div className="event-cols">
                 <div className="event-col">
@@ -405,6 +418,7 @@ export function Landing() {
           tail
         >
           <div className="gh-stage">
+            <Starfield className="glow-stars" />
             <div className="bezel bezel-split">
               <div className="bezel-copy">
                 <p className="lead">
@@ -449,6 +463,7 @@ export function Landing() {
           </div>
 
           <div className="gh-stage" style={{ marginTop: 'clamp(34px, 6vh, 68px)' }}>
+            <Starfield className="glow-stars" />
             <div className="bezel bezel-split">
               <div className="bezel-copy">
                 <FeatureAccordion />
