@@ -257,7 +257,6 @@ export function Landing() {
             scratch every year. Pit Box is where the team keeps track of every part of
             it — the tree, the status, the files, the people.
           </p>
-          <EmailCapture />
         </section>
 
 
@@ -311,6 +310,11 @@ export function Landing() {
                     <span className="spec-v">4 hours</span>
                   </div>
                 </div>
+              </div>
+
+              {/* The ask sits inside the card, under the facts that earn it. */}
+              <div className="bezel-pad bezel-cta">
+                <EmailCapture />
               </div>
             </div>
           </div>
